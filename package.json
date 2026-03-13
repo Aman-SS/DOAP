@@ -1,0 +1,26 @@
+{
+  "name": "doap",
+  "version": "1.0.0",
+  "description": "Desktop Offline AI Planner & Scraper",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "axios": "^1.6.7",
+    "cheerio": "^1.2.0",
+    "jsdom": "^28.1.0",
+    "playwright": "^1.58.2",
+    "sqlite3": "^5.0.2"
+  },
+  "devDependencies": {
+    "electron": "^41.0.0",
+    "electron-builder": "^26.8.1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
