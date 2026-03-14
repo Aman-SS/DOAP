@@ -5,6 +5,24 @@ export class DoapHistory extends BaseComponent {
         super();
         this.render(`
             <style>
+                .material-symbols-rounded {
+                    font-family: 'Material Symbols Rounded';
+                    font-weight: normal;
+                    font-style: normal;
+                    font-size: 24px;
+                    line-height: 1;
+                    display: inline-block;
+                    text-transform: none;
+                    letter-spacing: normal;
+                    word-wrap: normal;
+                    white-space: nowrap;
+                    direction: ltr;
+                    -webkit-font-smoothing: antialiased;
+                    -moz-osx-font-smoothing: grayscale;
+                    text-rendering: optimizeLegibility;
+                    font-feature-settings: 'liga';
+                    user-select: none;
+                }
                 .history-container {
                     display: flex;
                     flex-direction: column;
@@ -77,7 +95,10 @@ export class DoapHistory extends BaseComponent {
             <div class="history-container">
                 <div class="history-header">
                     <h3>Scrape History</h3>
-                    <button class="btn btn-secondary btn-sm" id="refresh-btn">Refresh</button>
+                    <button class="btn btn-secondary btn-sm" id="refresh-btn">
+                        <span class="material-symbols-rounded" style="font-size: 16px;">refresh</span>
+                        Refresh
+                    </button>
                 </div>
                 <div id="history-list" class="history-list">
                     <div class="empty-state">Loading history...</div>
@@ -124,9 +145,18 @@ export class DoapHistory extends BaseComponent {
                     <p>${item.content.substring(0, 200)}...</p>
                 </div>
                 <div class="item-actions">
-                    <button class="btn btn-secondary btn-sm view-btn">View Content</button>
-                    <button class="btn btn-primary btn-sm plan-btn">Plan with AI</button>
-                    <button class="btn btn-secondary btn-sm delete-btn" style="color: #ef4444;">Delete</button>
+                    <button class="btn btn-secondary btn-sm view-btn">
+                        <span class="material-symbols-rounded" style="font-size: 14px;">visibility</span>
+                        View
+                    </button>
+                    <button class="btn btn-primary btn-sm plan-btn">
+                        <span class="material-symbols-rounded" style="font-size: 14px;">auto_awesome</span>
+                        Plan
+                    </button>
+                    <button class="btn btn-secondary btn-sm delete-btn" style="color: #ef4444;">
+                        <span class="material-symbols-rounded" style="font-size: 14px;">delete</span>
+                        Delete
+                    </button>
                 </div>
             `;
 

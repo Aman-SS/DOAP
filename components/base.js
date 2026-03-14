@@ -159,9 +159,68 @@ export class BaseComponent extends HTMLElement {
                     display: none !important;
                 }
 
+                /* Layout & Containers */
+                .settings-section {
+                    margin-bottom: 24px;
+                }
+
+                .section-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 24px;
+                    padding-bottom: 16px;
+                    border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
+                }
+
+                .provider-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+
+                /* Status Badges */
+                .status-badge {
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 11px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    background: rgba(255, 255, 255, 0.05);
+                    color: var(--text-secondary, #94a3b8);
+                }
+
+                .status-badge.online {
+                    background: rgba(16, 185, 129, 0.1);
+                    color: #10b981;
+                }
+
+                .status-badge.offline {
+                    background: rgba(239, 68, 68, 0.1);
+                    color: #ef4444;
+                }
+
                 @keyframes fadeIn {
                     from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }
+                }
+
+                /* Icons */
+                .material-symbols-rounded {
+                    font-family: 'Material Symbols Rounded';
+                    font-weight: normal;
+                    font-style: normal;
+                    font-size: 24px;
+                    line-height: 1;
+                    letter-spacing: normal;
+                    text-transform: none;
+                    display: inline-block;
+                    white-space: nowrap;
+                    word-wrap: normal;
+                    direction: ltr;
+                    -webkit-font-feature-settings: 'liga';
+                    -webkit-font-smoothing: antialiased;
                 }
             </style>
         `;
@@ -169,5 +228,18 @@ export class BaseComponent extends HTMLElement {
 
     render(htmlContent) {
         this.shadowRoot.innerHTML = this.getSharedStyles() + htmlContent;
+    }
+
+    escapeHTML(str) {
+        if (!str) return '';
+        return str.replace(/[&<>"']/g, function(m) {
+            return {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[m];
+        });
     }
 }

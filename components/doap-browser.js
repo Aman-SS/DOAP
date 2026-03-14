@@ -5,6 +5,24 @@ export class DoapBrowser extends BaseComponent {
         super();
         this.render(`
             <style>
+                .material-symbols-rounded {
+                    font-family: 'Material Symbols Rounded';
+                    font-weight: normal;
+                    font-style: normal;
+                    font-size: 24px;
+                    line-height: 1;
+                    display: inline-block;
+                    text-transform: none;
+                    letter-spacing: normal;
+                    word-wrap: normal;
+                    white-space: nowrap;
+                    direction: ltr;
+                    -webkit-font-smoothing: antialiased;
+                    -moz-osx-font-smoothing: grayscale;
+                    text-rendering: optimizeLegibility;
+                    font-feature-settings: 'liga';
+                    user-select: none;
+                }
                 .browser-view {
                     display: flex;
                     flex-direction: column;
@@ -16,42 +34,58 @@ export class DoapBrowser extends BaseComponent {
                     align-items: center;
                     gap: 12px;
                     padding: 8px 16px;
-                    background: var(--sidebar-bg, #1e293b);
-                    border-bottom: 1px solid var(--border-color, #334155);
-                    color: white;
+                    background: var(--card-bg);
+                    border-bottom: 1px solid var(--border-color);
                 }
-                .browser-nav-btns {
+                .nav-controls {
                     display: flex;
-                    gap: 8px;
+                    gap: 4px;
                 }
-                .nav-btn {
-                    background: rgba(255, 255, 255, 0.1);
+                .toolbar-btn {
+                    background: transparent;
                     border: none;
-                    color: white;
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 6px;
+                    color: var(--text-secondary);
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 50%;
                     cursor: pointer;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-size: 18px;
+                    transition: all 0.2s;
                 }
-                .nav-btn:hover {
-                    background: rgba(255, 255, 255, 0.2);
+                .toolbar-btn:hover:not(:disabled) {
+                    background: rgba(255, 255, 255, 0.1);
+                    color: white;
                 }
-                .browser-address-bar {
+                .toolbar-btn:disabled {
+                    opacity: 0.3;
+                    cursor: not-allowed;
+                }
+                .toolbar-btn .material-symbols-rounded {
+                    font-size: 20px;
+                }
+                .address-bar-container {
                     flex: 1;
                     position: relative;
+                    display: flex;
+                    align-items: center;
                 }
-                .browser-address-bar input {
+                .address-bar-container .material-symbols-rounded {
+                    position: absolute;
+                    left: 12px;
+                    font-size: 18px;
+                    color: var(--text-secondary);
+                    pointer-events: none;
+                }
+                .address-bar {
                     width: 100%;
                     background: rgba(15, 23, 42, 0.6);
-                    border: 1px solid var(--border-color, #334155);
-                    padding: 8px 12px;
-                    border-radius: 6px;
-                    color: white;
-                    font-size: 13px;
+                    border: 1px solid var(--border-color);
+                    padding: 8px 12px 8px 38px;
+                    border-radius: 8px;
+                    color: var(--text-primary);
+                    font-size: 14px;
                     outline: none;
                 }
                 .browser-actions {
@@ -118,17 +152,30 @@ export class DoapBrowser extends BaseComponent {
             </style>
             <div class="browser-view">
                 <div class="browser-toolbar">
-                    <div class="browser-nav-btns">
-                        <button class="nav-btn" id="back-btn" title="Back">←</button>
-                        <button class="nav-btn" id="forward-btn" title="Forward">→</button>
-                        <button class="nav-btn" id="reload-btn" title="Reload">↻</button>
+                    <div class="nav-controls">
+                        <button class="toolbar-btn" id="back-btn" title="Back" disabled>
+                            <span class="material-symbols-rounded">arrow_back</span>
+                        </button>
+                        <button class="toolbar-btn" id="forward-btn" title="Forward" disabled>
+                            <span class="material-symbols-rounded">arrow_forward</span>
+                        </button>
+                        <button class="toolbar-btn" id="reload-btn" title="Reload">
+                            <span class="material-symbols-rounded">refresh</span>
+                        </button>
                     </div>
-                    <div class="browser-address-bar">
-                        <input type="text" id="url-input" placeholder="Search or type URL...">
+                    <div class="address-bar-container">
+                        <span class="material-symbols-rounded">language</span>
+                        <input type="text" class="address-bar" id="url-input" placeholder="Search or type URL...">
                     </div>
                     <div class="browser-actions">
-                        <button class="action-pill" id="scrape-page-btn">Scrape Context</button>
-                        <button class="action-pill secondary" id="ai-analyze-btn">Summarize</button>
+                        <button class="action-pill" id="scrape-page-btn">
+                            <span class="material-symbols-rounded" style="font-size: 16px;">content_copy</span>
+                            Scrape Context
+                        </button>
+                        <button class="action-pill secondary" id="ai-analyze-btn">
+                            <span class="material-symbols-rounded" style="font-size: 16px;">auto_awesome</span>
+                            Summarize
+                        </button>
                     </div>
                 </div>
                 <div class="webview-container">
@@ -151,9 +198,30 @@ export class DoapBrowser extends BaseComponent {
         this.scrapeBtn = this.shadowRoot.getElementById('scrape-page-btn');
         this.aiBtn = this.shadowRoot.getElementById('ai-analyze-btn');
 
-        this.backBtn.addEventListener('click', () => this.webview.canGoBack() && this.webview.goBack());
-        this.forwardBtn.addEventListener('click', () => this.webview.canGoForward() && this.webview.goForward());
-        this.reloadBtn.addEventListener('click', () => this.webview.reload());
+        const updateNavButtons = () => {
+            if (this.webview) {
+                this.backBtn.disabled = !this.webview.canGoBack();
+                this.forwardBtn.disabled = !this.webview.canGoForward();
+            }
+        };
+
+        this.backBtn.addEventListener('click', () => {
+            if (this.webview && this.webview.canGoBack()) {
+                this.webview.goBack();
+            }
+        });
+
+        this.forwardBtn.addEventListener('click', () => {
+            if (this.webview && this.webview.canGoForward()) {
+                this.webview.goForward();
+            }
+        });
+
+        this.reloadBtn.addEventListener('click', () => {
+            if (this.webview) {
+                this.webview.reload();
+            }
+        });
 
         this.urlInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -167,10 +235,15 @@ export class DoapBrowser extends BaseComponent {
             this.loadingOverlay.classList.remove('hidden');
         });
 
-        this.webview.addEventListener('did-stop-loading', () => {
+        const handleStopLoading = () => {
             this.loadingOverlay.classList.add('hidden');
             this.urlInput.value = this.webview.getURL();
-        });
+            updateNavButtons();
+        };
+
+        this.webview.addEventListener('did-stop-loading', handleStopLoading);
+        this.webview.addEventListener('did-navigate', updateNavButtons);
+        this.webview.addEventListener('did-navigate-in-page', updateNavButtons);
 
         this.scrapeBtn.addEventListener('click', () => this.handleBrowserScrape());
         this.aiBtn.addEventListener('click', () => this.handleBrowserAI());

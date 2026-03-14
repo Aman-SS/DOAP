@@ -5,6 +5,24 @@ export class DoapScrape extends BaseComponent {
         super();
         this.render(`
             <style>
+                .material-symbols-rounded {
+                    font-family: 'Material Symbols Rounded';
+                    font-weight: normal;
+                    font-style: normal;
+                    font-size: 24px;
+                    line-height: 1;
+                    display: inline-block;
+                    text-transform: none;
+                    letter-spacing: normal;
+                    word-wrap: normal;
+                    white-space: nowrap;
+                    direction: ltr;
+                    -webkit-font-smoothing: antialiased;
+                    -moz-osx-font-smoothing: grayscale;
+                    text-rendering: optimizeLegibility;
+                    font-feature-settings: 'liga';
+                    user-select: none;
+                }
                 .spinner {
                     width: 24px;
                     height: 24px;
@@ -116,19 +134,19 @@ export class DoapScrape extends BaseComponent {
             if (result.success) {
                 const isEmpty = !result.content || result.content.trim().length === 0;
                 const contentPreview = isEmpty 
-                    ? '<div class="warning-box"><strong>Warning:</strong> No content was extracted. Check your URL or selector.</div>'
+                    ? '<div class="warning-box"><span class="material-symbols-rounded" style="vertical-align: middle; margin-right: 8px;">warning</span><strong>Warning:</strong> No content was extracted. Check your URL or selector.</div>'
                     : `<p>${result.content.substring(0, 500)}${result.content.length > 500 ? '...' : ''}</p>`;
 
                 scrapeResult.innerHTML = `
                     <div class="success-header">
-                        <h4>Scrape Result: ${result.title || 'Untitled'}</h4>
+                        <h4><span class="material-symbols-rounded">article</span> Scrape Result: ${result.title || 'Untitled'}</h4>
                     </div>
                     <div class="result-content">
                         ${contentPreview}
                     </div>
                     <div class="preview-actions">
-                        <button class="btn btn-primary" id="save-btn">Save to Database</button>
-                        <button class="btn btn-secondary" id="discard-btn">Discard</button>
+                        <button class="btn btn-primary" id="save-btn"><span class="material-symbols-rounded">save</span> Save to Database</button>
+                        <button class="btn btn-secondary" id="discard-btn"><span class="material-symbols-rounded">delete</span> Discard</button>
                     </div>
                 `;
                 
@@ -155,17 +173,17 @@ export class DoapScrape extends BaseComponent {
         const scrapeResult = this.shadowRoot.getElementById('scrape-result');
         
         saveBtn.disabled = true;
-        saveBtn.innerText = 'Saving...';
+        saveBtn.innerHTML = '<span class="material-symbols-rounded">sync</span> Saving...';
 
         const saveResult = await window.api.saveScrape(data);
         if (saveResult.success) {
             scrapeResult.innerHTML = `
                 <div class="success-header">
-                    <h4>Data Saved Successfully! (ID: ${saveResult.id})</h4>
+                    <h4><span class="material-symbols-rounded" style="color: #10b981;">check_circle</span> Data Saved Successfully! (ID: ${saveResult.id})</h4>
                 </div>
                 <div class="ai-actions" style="margin-top: 20px;">
-                    <button class="btn btn-primary" id="ask-ai-btn">Plan with AI</button>
-                    <button class="btn btn-secondary" id="back-btn">Back to Scraper</button>
+                    <button class="btn btn-primary" id="ask-ai-btn"><span class="material-symbols-rounded">psychology</span> Plan with AI</button>
+                    <button class="btn btn-secondary" id="back-btn"><span class="material-symbols-rounded">arrow_back</span> Back to Scraper</button>
                 </div>
             `;
             

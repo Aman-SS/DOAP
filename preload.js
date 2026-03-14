@@ -17,5 +17,10 @@ contextBridge.exposeInMainWorld('api', {
   pullModel: (name) => ipcRenderer.invoke('pull-model', name),
   getRunningModels: () => ipcRenderer.invoke('get-running-models'),
   getModelInfo: (name) => ipcRenderer.invoke('get-model-info', name),
-  onPullProgress: (callback) => ipcRenderer.on('pull-progress', (event, data) => callback(data))
+  startOllamaService: () => ipcRenderer.invoke('start-ollama-service'),
+  stopOllamaService: () => ipcRenderer.invoke('stop-ollama-service'),
+  onPullProgress: (callback) => ipcRenderer.on('pull-progress', (event, data) => callback(data)),
+  terminalCommandStream: (command) => ipcRenderer.send('terminal-command-stream', command),
+  onTerminalData: (callback) => ipcRenderer.on('terminal-stream-data', (event, data) => callback(data)),
+  onTerminalExit: (callback) => ipcRenderer.on('terminal-stream-exit', (event, code) => callback(code))
 });

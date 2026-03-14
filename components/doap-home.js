@@ -5,13 +5,53 @@ export class DoapHome extends BaseComponent {
         super();
         this.render(`
             <style>
+                .material-symbols-rounded {
+                    font-family: 'Material Symbols Rounded';
+                    font-weight: normal;
+                    font-style: normal;
+                    font-size: 24px;
+                    line-height: 1;
+                    display: inline-block;
+                    text-transform: none;
+                    letter-spacing: normal;
+                    word-wrap: normal;
+                    white-space: nowrap;
+                    direction: ltr;
+                    -webkit-font-smoothing: antialiased;
+                    -moz-osx-font-smoothing: grayscale;
+                    text-rendering: optimizeLegibility;
+                    font-feature-settings: 'liga';
+                    user-select: none;
+                }
                 .search-hub {
+                    position: relative;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
                     justify-content: center;
                     min-height: calc(100vh - 200px);
                     padding: 0 20px;
+                }
+                .dashboard-toggle {
+                    position: absolute;
+                    top: 24px;
+                    right: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    color: var(--text-secondary);
+                    background: none;
+                    border: none;
+                    transition: color 0.2s, transform 0.2s;
+                    z-index: 10;
+                }
+                .dashboard-toggle .material-symbols-rounded {
+                    font-size: 32px;
+                }
+                .dashboard-toggle:hover {
+                    color: white;
+                    transform: scale(1.1);
                 }
                 .search-container {
                     width: 100%;
@@ -57,21 +97,24 @@ export class DoapHome extends BaseComponent {
                 .quick-card {
                     background: var(--card-bg);
                     border: 1px solid var(--border-color);
-                    padding: 16px;
+                    padding: 20px 16px;
                     border-radius: 12px;
                     cursor: pointer;
                     transition: all 0.2s;
                     text-align: center;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
                 }
                 .quick-card:hover {
                     border-color: var(--accent-color);
                     transform: translateY(-2px);
                     background: rgba(255, 255, 255, 0.05);
                 }
-                .quick-card i {
-                    font-size: 24px;
-                    display: block;
-                    margin-bottom: 8px;
+                .quick-card .material-symbols-rounded {
+                    font-size: 32px;
+                    margin-bottom: 12px;
+                    color: var(--accent-color);
                 }
                 .quick-card span {
                     font-size: 13px;
@@ -81,6 +124,9 @@ export class DoapHome extends BaseComponent {
             </style>
             
             <div class="search-hub">
+                <button class="dashboard-toggle" id="hub-drawer-toggle" title="Menu">
+                    <span class="material-symbols-rounded">menu</span>
+                </button>
                 <div class="search-container">
                     <h1 class="hub-logo">DOAP</h1>
                     <div class="hub-input-group">
@@ -89,24 +135,69 @@ export class DoapHome extends BaseComponent {
                 </div>
                 
                 <div class="quick-links">
+                    <div class="quick-card status-card" data-view="settings" id="ollama-card">
+                        <div class="status-indicator-mini">
+                            <span class="ollama-status-dot"></span>
+                        </div>
+                        <span class="material-symbols-rounded">smart_toy</span>
+                        <span class="card-label">Ollama Service</span>
+                        <span class="ollama-status-text">Checking...</span>
+                    </div>
                     <div class="quick-card" data-view="history">
-                        <i>📜</i>
+                        <span class="material-symbols-rounded">history</span>
                         <span>Recent Scrapes</span>
                     </div>
                     <div class="quick-card" data-view="curiosity">
-                        <i>🤖</i>
+                        <span class="material-symbols-rounded">psychology</span>
                         <span>Ask AI</span>
                     </div>
                     <div class="quick-card" data-view="feature-map">
-                        <i>🗺️</i>
+                        <span class="material-symbols-rounded">hub</span>
                         <span>System Map</span>
                     </div>
                     <div class="quick-card" data-view="settings">
-                        <i>⚙️</i>
+                        <span class="material-symbols-rounded">settings</span>
                         <span>Settings</span>
                     </div>
                 </div>
             </div>
+
+            <style>
+                .status-card {
+                    position: relative;
+                    border-color: rgba(148, 163, 184, 0.2);
+                }
+                .status-indicator-mini {
+                    position: absolute;
+                    top: 12px;
+                    right: 12px;
+                }
+                .ollama-status-dot {
+                    display: block;
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: #94a3b8;
+                    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.1);
+                    transition: all 0.3s ease;
+                }
+                .ollama-status-dot.connected {
+                    background: #10b981;
+                    box-shadow: 0 0 8px #10b981, 0 0 0 3px rgba(16, 185, 129, 0.2);
+                }
+                .ollama-status-text {
+                    font-size: 11px !important;
+                    margin-top: 4px;
+                    color: var(--text-secondary);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                .card-label {
+                    font-size: 13px;
+                    font-weight: 600;
+                    margin-bottom: 2px;
+                }
+            </style>
         `);
     }
 
@@ -132,9 +223,19 @@ export class DoapHome extends BaseComponent {
             });
         });
 
-        // Hide global search when on home
-        const globalSearch = document.getElementById('global-search-container');
-        if (globalSearch) globalSearch.classList.add('hidden');
+        // Initialize status from global state if available
+        if (typeof window.ollamaOnline !== 'undefined') {
+            const dot = this.shadowRoot.querySelector('.ollama-status-dot');
+            const text = this.shadowRoot.querySelector('.ollama-status-text');
+            if (dot && text) {
+                if (window.ollamaOnline) dot.classList.add('connected');
+                text.innerText = window.ollamaOnline ? 'Online' : 'Offline';
+            }
+        }
+
+        this.shadowRoot.getElementById('hub-drawer-toggle').addEventListener('click', () => {
+            window.dispatchEvent(new CustomEvent('toggle-drawer', { detail: { open: true } }));
+        });
     }
 
     disconnectedCallback() {

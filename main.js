@@ -18,6 +18,7 @@ function createWindow() {
   });
 
   win.loadFile('index.html');
+  win.maximize();
   
   // IPC Handlers
   ipcMain.handle('scrape-url', async (event, { url, selector }) => {
@@ -61,7 +62,6 @@ function createWindow() {
   ipcMain.handle('run-wsl-command', async (event, command) => {
     return new Promise((resolve) => {
       const { exec } = require('child_process');
-      // Use 'wsl' prefix to run command in default WSL instance
       exec(`wsl ${command}`, (error, stdout, stderr) => {
         resolve({
           success: !error,
@@ -71,6 +71,31 @@ function createWindow() {
         });
       });
     });
+  });
+
+  ipcMain.on('terminal-command-stream', (event, command) => {
+    const { spawn } = require('child_process');
+    try {
+      // Use cmd /c wsl to better handle combined command strings if needed, 
+      // or just spawn wsl with arguments
+      const args = command.split(' ').filter(Boolean);
+      const child = spawn('wsl', args);
+      
+      child.stdout.on('data', (data) => {
+        event.sender.send('terminal-stream-data', data.toString());
+      });
+      
+      child.stderr.on('data', (data) => {
+        event.sender.send('terminal-stream-data', data.toString());
+      });
+      
+      child.on('close', (code) => {
+        event.sender.send('terminal-stream-exit', code);
+      });
+    } catch (e) {
+      event.sender.send('terminal-stream-data', `Error spawning command: ${e.message}\n`);
+      event.sender.send('terminal-stream-exit', 1);
+    }
   });
 
   ipcMain.handle('get-wsl-ip', async () => {
@@ -233,6 +258,38 @@ function createWindow() {
     } catch (error) {
       return { success: false, error: error.message };
     }
+  });
+
+  ipcMain.handle('start-ollama-service', async () => {
+    return new Promise((resolve) => {
+      const { spawn } = require('child_process');
+      // Execute 'ollama serve' in WSL. Use detached to let it survive parent exit if needed,
+      // and stdio ignore to avoid bloat.
+      try {
+        const child = spawn('wsl', ['ollama', 'serve'], {
+          detached: true,
+          stdio: 'ignore'
+        });
+        child.unref();
+        resolve({ success: true, message: 'Ollama service start command sent' });
+      } catch (error) {
+        resolve({ success: false, error: error.message });
+      }
+    });
+  });
+
+  ipcMain.handle('stop-ollama-service', async () => {
+    return new Promise((resolve) => {
+      const { exec } = require('child_process');
+      // Ubuntu/Debian usually has pkill. Fallback to killall if needed.
+      exec('wsl pkill ollama', (error, stdout, stderr) => {
+        if (error && error.code !== 1) { // code 1 usually means process not found
+          resolve({ success: false, error: error.message || stderr });
+        } else {
+          resolve({ success: true, message: 'Ollama service stopped' });
+        }
+      });
+    });
   });
 
   win.webContents.on('console-message', (event, level, message, line, sourceId) => {

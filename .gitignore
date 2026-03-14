@@ -36,3 +36,11 @@ yarn-error.log*
 sqlite_check.txt
 debug/
 tmp/
+
+# Agent/AI Configuration
+.agent/
+.gemini/
+.agents/
+_agent/
+_agents/
+brain/

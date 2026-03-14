@@ -5,6 +5,24 @@ export class DoapCuriosity extends BaseComponent {
         super();
         this.render(`
             <style>
+                .material-symbols-rounded {
+                    font-family: 'Material Symbols Rounded';
+                    font-weight: normal;
+                    font-style: normal;
+                    font-size: 24px;
+                    line-height: 1;
+                    display: inline-block;
+                    text-transform: none;
+                    letter-spacing: normal;
+                    word-wrap: normal;
+                    white-space: nowrap;
+                    direction: ltr;
+                    -webkit-font-smoothing: antialiased;
+                    -moz-osx-font-smoothing: grayscale;
+                    text-rendering: optimizeLegibility;
+                    font-feature-settings: 'liga';
+                    user-select: none;
+                }
                 .spinner {
                     width: 24px;
                     height: 24px;
@@ -198,11 +216,16 @@ export class DoapCuriosity extends BaseComponent {
         }
 
         errorDiv.innerHTML = `
-            <h4 style="color: #ef4444; margin-bottom: 8px;">${title}</h4>
-            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;"><strong>Error details:</strong> ${errorMsg}</p>
-            <div style="font-size: 13px; color: var(--text-primary);">
-                <strong>How to fix this:</strong>
-                ${fixHtml}
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+                <span class="material-symbols-rounded" style="color: #ef4444; font-size: 28px;">error</span>
+                <div>
+                    <h4 style="color: #ef4444; margin-bottom: 8px;">${title}</h4>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;"><strong>Error details:</strong> ${errorMsg}</p>
+                    <div style="font-size: 13px; color: var(--text-primary);">
+                        <strong>How to fix this:</strong>
+                        ${fixHtml}
+                    </div>
+                </div>
             </div>
         `;
         errorDiv.classList.remove('hidden');

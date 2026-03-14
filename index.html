@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://d3js.org; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://ollama.com; connect-src 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://d3js.org; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; img-src 'self' data: https://ollama.com; connect-src 'self';">
     <title>DOAP - AI Desktop Scraper</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
 </head>
 <body>
     <div class="app-container">
@@ -17,33 +18,29 @@
         <aside class="nav-drawer hidden" id="nav-drawer">
             <div class="drawer-header">
                 <h3>Menu</h3>
-                <button class="close-drawer" id="close-drawer">&times;</button>
+                <button class="close-drawer" id="close-drawer"><span class="material-symbols-rounded">close</span></button>
             </div>
             <nav>
-                <button class="nav-item active" id="nav-home" title="Home">🏠 <span>Home</span></button>
-                <button class="nav-item" id="nav-scrape" title="New Scrape">🔍 <span>Scrape</span></button>
-                <button class="nav-item" id="nav-history" title="History">📜 <span>History</span></button>
-                <button class="nav-item" id="nav-db-viewer" title="Database">💾 <span>DB</span></button>
-                <button class="nav-item" id="nav-feature-map" title="Map">🗺️ <span>Map</span></button>
-                <button class="nav-item" id="nav-curiosity" title="Curiosity">🤖 <span>AI</span></button>
-                <button class="nav-item" id="nav-settings" title="Settings">⚙️ <span>Settings</span></button>
+                <button class="nav-item active" id="nav-home" title="Home"><span class="material-symbols-rounded">home</span> <span>Home</span></button>
+                <button class="nav-item" id="nav-scrape" title="New Scrape"><span class="material-symbols-rounded">query_stats</span> <span>Scrape</span></button>
+                <button class="nav-item" id="nav-history" title="History"><span class="material-symbols-rounded">history</span> <span>History</span></button>
+                <button class="nav-item" id="nav-db-viewer" title="Database"><span class="material-symbols-rounded">database</span> <span>DB</span></button>
+                <button class="nav-item" id="nav-feature-map" title="Map"><span class="material-symbols-rounded">hub</span> <span>Map</span></button>
+                <button class="nav-item" id="nav-curiosity" title="Curiosity"><span class="material-symbols-rounded">psychology</span> <span>AI</span></button>
+                <button class="nav-item" id="nav-settings" title="Settings"><span class="material-symbols-rounded">settings</span> <span>Settings</span></button>
             </nav>
         </aside>
         
         <main class="content">
-            <header>
+            <header id="main-header" class="hidden">
                 <div class="header-left">
                     <div class="header-logo" id="header-logo">DOAP</div>
-                    <h2 id="page-title" style="display: none;">Dashboard</h2>
                 </div>
                 <div class="global-search-container" id="global-search-container">
                     <input type="text" class="global-search-input" id="global-search-input" placeholder="Search or enter URL (e.g. google.com)...">
                 </div>
                 <div class="header-right">
-                    <div class="status-indicator">
-                        <span class="dot"></span> <span id="provider-status">Checking...</span>
-                    </div>
-                    <button class="icon-btn" id="drawer-toggle" title="Menu">☰</button>
+                    <button class="icon-btn" id="global-drawer-toggle" title="Menu"><span class="material-symbols-rounded">menu</span></button>
                 </div>
             </header>
 

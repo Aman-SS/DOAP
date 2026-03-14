@@ -144,6 +144,24 @@ nav {
     color: white;
 }
 
+header {
+    height: 64px;
+    padding: 0 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+header.hidden {
+    height: 0;
+    overflow: hidden;
+    padding: 0;
+    border-bottom: none;
+    opacity: 0;
+}
+
 .content {
     flex: 1;
     display: flex;
@@ -161,14 +179,6 @@ nav {
     flex-direction: column;
 }
 
-header {
-    height: 64px;
-    padding: 0 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--border-color);
-}
 
 .header-left {
     display: flex;
@@ -185,14 +195,35 @@ header {
 
 .global-search-container {
     flex: 1;
-    max-width: 500px;
-    margin: 0 24px;
+    margin: 0 40px;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-toggle {
+    position: absolute;
+    right: 8px;
+    height: 32px !important;
+    width: 32px !important;
+    font-size: 16px !important;
+    background: transparent !important;
+}
+
+.global-search-input {
+    width: 100%;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 20px;
+    color: white;
+    font-size: 14px;
+    outline: none;
 }
 
 .header-right {
     display: flex;
     align-items: center;
-    gap: 20px;
 }
 
 .icon-btn {
@@ -807,6 +838,46 @@ tr:hover td {
     font-size: 14px;
 }
 
+/* Material Icons */
+.material-symbols-rounded {
+    font-family: 'Material Symbols Rounded';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 20px;
+    display: inline-block;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    word-wrap: normal;
+    white-space: nowrap;
+    direction: ltr;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'liga';
+    user-select: none;
+}
+
+.nav-item {
+    width: 100%;
+    padding: 12px 16px;
+    margin-bottom: 4px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.nav-item .material-symbols-rounded {
+    font-size: 22px;
+}
+
 .settings-tab-btn:hover {
     background: rgba(255, 255, 255, 0.05);
     color: var(--text-primary);
@@ -927,4 +998,24 @@ tr:hover td {
 .settings-sidebar {
     position: sticky;
     top: 0;
+}
+
+/* Material Icons */
+.material-symbols-rounded {
+    font-family: 'Material Symbols Rounded';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 20px;
+    display: inline-block;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    word-wrap: normal;
+    white-space: nowrap;
+    direction: ltr;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'liga';
+    user-select: none;
 }

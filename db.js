@@ -2,15 +2,13 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const { app } = require('electron');
 
-// Ensure database directory exists in user data folder
+// Database path in user data folder
 const dbPath = path.join(app.getPath('userData'), 'doap_database.sqlite');
-console.log('Database path:', dbPath);
 
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
-        console.error('Error opening database', err.message);
+        // Silent fail or system alert in production
     } else {
-        console.log('Connected to the SQLite database.');
         initializeSchemas();
     }
 });
@@ -45,6 +43,7 @@ function initializeSchemas() {
         )`, () => {
             // Default settings
             db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`, ['ollama_url', 'http://127.0.0.1:11434']);
+            db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`, ['ollama_model', 'llama3']);
         });
     });
 }

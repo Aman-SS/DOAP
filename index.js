@@ -25,9 +25,9 @@ const navItems = document.querySelectorAll('.nav-item');
 const globalSearchInput = document.getElementById('global-search-input');
 const navDrawer = document.getElementById('nav-drawer');
 const drawerOverlay = document.getElementById('drawer-overlay');
-const drawerToggle = document.getElementById('drawer-toggle');
 const closeDrawerBtn = document.getElementById('close-drawer');
-const headerLogo = document.getElementById('header-logo');
+const mainHeader = document.getElementById('main-header');
+const globalDrawerToggle = document.getElementById('global-drawer-toggle');
 
 function toggleDrawer(open) {
     if (open) {
@@ -65,18 +65,14 @@ function navigateTo(route, params = {}) {
     }
 
     // Update Header visibility
-    const searchContainer = document.getElementById('global-search-container');
     if (route === 'home') {
-        searchContainer.classList.add('hidden');
-        headerLogo.style.opacity = '0';
-        headerLogo.style.pointerEvents = 'none';
+        mainHeader.classList.add('hidden');
     } else {
-        searchContainer.classList.remove('hidden');
-        headerLogo.style.opacity = '1';
-        headerLogo.style.pointerEvents = 'auto';
+        mainHeader.classList.remove('hidden');
     }
 
-    // Update Title
+    // Update Title (Optional: if we ever bring back page titles)
+    /*
     const titles = {
         home: 'Dashboard',
         scrape: 'Web Scraper',
@@ -87,13 +83,19 @@ function navigateTo(route, params = {}) {
         settings: 'Settings',
         browser: 'Browser'
     };
-    document.getElementById('page-title').innerText = titles[route] || 'Dashboard';
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) titleEl.innerText = titles[route] || 'Dashboard';
+    */
 }
 
 // Drawer Event Listeners
-drawerToggle.addEventListener('click', () => toggleDrawer(true));
+globalDrawerToggle.addEventListener('click', () => toggleDrawer(true));
 closeDrawerBtn.addEventListener('click', () => toggleDrawer(false));
 drawerOverlay.addEventListener('click', () => toggleDrawer(false));
+
+window.addEventListener('toggle-drawer', (e) => {
+    toggleDrawer(e.detail.open);
+});
 
 // Global search handling
 globalSearchInput.addEventListener('keydown', (e) => {
@@ -139,18 +141,47 @@ window.closeModal = () => {
 // Attach to window so HTML inline onclick="closeModal()" still works
 window.closeModal = window.closeModal;
 
-// Handle global provider status updates from Settings component
+// Handle global provider status updates
 window.addEventListener('provider-status', (e) => {
-    const dot = document.querySelector('.status-indicator .dot');
-    const text = document.getElementById('provider-status');
-    if (e.detail.online) {
-        dot.classList.add('connected');
-        text.innerText = 'Online';
-    } else {
-        dot.classList.remove('connected');
-        text.innerText = 'Offline';
-    }
+    const dots = document.querySelectorAll('.status-indicator .dot, .ollama-status-dot');
+    const texts = document.querySelectorAll('#provider-status, .ollama-status-text');
+    
+    dots.forEach(dot => {
+        if (e.detail.online) {
+            dot.classList.add('connected');
+        } else {
+            dot.classList.remove('connected');
+        }
+    });
+
+    texts.forEach(text => {
+        text.innerText = e.detail.online ? 'Online' : 'Offline';
+    });
 });
+
+// Global Status Polling & State
+window.ollamaOnline = false;
+
+async function globalCheckStatus() {
+    if (!window.api) return;
+    try {
+        const result = await window.api.checkOllama();
+        const online = !!result.online;
+        window.ollamaOnline = online;
+        window.dispatchEvent(new CustomEvent('provider-status', { 
+            detail: { online: online } 
+        }));
+    } catch (e) {
+        window.ollamaOnline = false;
+        window.dispatchEvent(new CustomEvent('provider-status', { 
+            detail: { online: false } 
+        }));
+    }
+}
+
+// Initial check and start polling
+globalCheckStatus(); 
+setInterval(globalCheckStatus, 10000);
 
 // Initial mount
 navigateTo('home');
