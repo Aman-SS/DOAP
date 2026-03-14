@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://d3js.org; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://ollama.com; connect-src 'self';">
     <title>DOAP - AI Desktop Scraper</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,340 +12,42 @@
 </head>
 <body>
     <div class="app-container">
-        <aside class="sidebar">
-            <div class="logo">
-                <h1>DOAP</h1>
-                <span>AI Crawler</span>
+        <!-- Navigation Drawer (Hidden by default) -->
+        <div id="drawer-overlay" class="drawer-overlay hidden"></div>
+        <aside class="nav-drawer hidden" id="nav-drawer">
+            <div class="drawer-header">
+                <h3>Menu</h3>
+                <button class="close-drawer" id="close-drawer">&times;</button>
             </div>
             <nav>
-                <button class="nav-item active" id="nav-home">Home</button>
-                <button class="nav-item" id="nav-scrape">New Scrape</button>
-                <button class="nav-item" id="nav-history">History</button>
-                <button class="nav-item" id="nav-db-viewer">DB Viewer</button>
-                <button class="nav-item" id="nav-feature-map">Architecture Map</button>
-                <button class="nav-item" id="nav-settings">Settings</button>
+                <button class="nav-item active" id="nav-home" title="Home">🏠 <span>Home</span></button>
+                <button class="nav-item" id="nav-scrape" title="New Scrape">🔍 <span>Scrape</span></button>
+                <button class="nav-item" id="nav-history" title="History">📜 <span>History</span></button>
+                <button class="nav-item" id="nav-db-viewer" title="Database">💾 <span>DB</span></button>
+                <button class="nav-item" id="nav-feature-map" title="Map">🗺️ <span>Map</span></button>
+                <button class="nav-item" id="nav-curiosity" title="Curiosity">🤖 <span>AI</span></button>
+                <button class="nav-item" id="nav-settings" title="Settings">⚙️ <span>Settings</span></button>
             </nav>
         </aside>
         
         <main class="content">
             <header>
-                <h2 id="page-title">Dashboard</h2>
-                <div class="status-indicator">
-                    <span class="dot"></span> <span id="provider-label">Ollama</span>: <span id="provider-status">Checking...</span>
+                <div class="header-left">
+                    <div class="header-logo" id="header-logo">DOAP</div>
+                    <h2 id="page-title" style="display: none;">Dashboard</h2>
+                </div>
+                <div class="global-search-container" id="global-search-container">
+                    <input type="text" class="global-search-input" id="global-search-input" placeholder="Search or enter URL (e.g. google.com)...">
+                </div>
+                <div class="header-right">
+                    <div class="status-indicator">
+                        <span class="dot"></span> <span id="provider-status">Checking...</span>
+                    </div>
+                    <button class="icon-btn" id="drawer-toggle" title="Menu">☰</button>
                 </div>
             </header>
 
-            <section id="home-view" class="view">
-                <div class="welcome-card">
-                    <h3>Welcome back</h3>
-                    <p>Start by crawling a website or planning your next AI operation.</p>
-                </div>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h4>Total Scrapes</h4>
-                        <span class="value" id="stat-scrapes">0</span>
-                    </div>
-                    <div class="stat-card">
-                        <h4>AI Insights</h4>
-                        <span class="value" id="stat-insights">0</span>
-                    </div>
-                </div>
-            </section>
-
-            <section id="scrape-view" class="view hidden">
-                <div class="form-card">
-                    <h3>Start New Scrape</h3>
-                    <div class="input-group">
-                        <label for="url-input">Website URL</label>
-                        <input type="text" id="url-input" placeholder="https://example.com">
-                    </div>
-                    <div class="input-group">
-                        <label for="selector-input">Target (Optional, leave empty for auto-readability)</label>
-                        <input type="text" id="selector-input" placeholder="main content, .article, etc">
-                    </div>
-                    <button class="btn btn-primary" id="start-scrape-btn">Crawl & Extract</button>
-                </div>
-                <div id="scrape-progress" class="hidden">
-                    <div class="spinner"></div>
-                    <p>Crawling content...</p>
-                </div>
-                <div id="scrape-result" class="hidden result-card">
-                    <!-- Result will be injected here -->
-                </div>
-            </section>
-
-            <section id="history-view" class="view hidden">
-                <div class="history-container">
-                    <div class="history-header">
-                        <h3>Scrape History</h3>
-                        <button class="btn btn-secondary btn-sm" onclick="updateStats(); loadHistory();">Refresh</button>
-                    </div>
-                    <div id="history-list" class="history-list">
-                        <!-- History items will be injected here -->
-                        <div class="empty-state">No scrapes found yet. Start by crawling a website!</div>
-                    </div>
-                </div>
-            </section>
-
-            <section id="db-viewer-view" class="view hidden">
-                <div class="history-container">
-                    <div class="history-header">
-                        <h3>Database Tables</h3>
-                        <div class="db-controls">
-                            <select id="table-select" class="btn btn-secondary btn-sm">
-                                <option value="scrapes">scrapes</option>
-                                <option value="insights">insights</option>
-                            </select>
-                            <button class="btn btn-secondary btn-sm" onclick="loadDbViewer()">Refresh</button>
-                        </div>
-                    </div>
-                    <div class="db-table-wrapper">
-                        <table id="db-table">
-                            <thead>
-                                <tr id="db-table-head"></tr>
-                            </thead>
-                            <tbody id="db-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <section id="settings-view" class="view hidden">
-                <div class="welcome-card">
-                    <h3>AI Connection Settings</h3>
-                    <p>Configure and manage your local and cloud-based AI providers.</p>
-                </div>
-
-                <div class="settings-tabs">
-                    <button class="settings-tab-btn active" data-tab="ollama">Ollama</button>
-                    <button class="settings-tab-btn" data-tab="openai">OpenAI</button>
-                    <button class="settings-tab-btn" data-tab="anthropic">Anthropic</button>
-                    <button class="settings-tab-btn" data-tab="huggingface">Hugging Face</button>
-                </div>
-
-                <div class="settings-grid">
-                    <div class="settings-main">
-                        <!-- Ollama Tab Content -->
-                        <div id="settings-ollama" class="settings-tab-content active">
-                            <div class="settings-grid-rows">
-                                <div class="settings-row-top">
-                                    <div class="form-card settings-section">
-                                        <div class="section-header">
-                                            <div class="provider-info">
-                                                <img src="https://ollama.com/public/ollama.png" alt="Ollama" class="provider-logo">
-                                                <h4>Ollama (Local)</h4>
-                                            </div>
-                                            <div id="settings-ollama-status" class="status-badge offline">Offline</div>
-                                        </div>
-                                        <div class="input-group">
-                                            <label>API Server URL</label>
-                                            <div class="input-with-action">
-                                                <input type="text" id="ollama-url-input" placeholder="http://127.0.0.1:11434">
-                                                <button class="btn btn-secondary btn-sm" id="discover-wsl-btn" title="Auto-discover WSL IP">Auto-find WSL</button>
-                                                <button class="btn btn-secondary btn-sm" id="test-ollama-btn">Test Connection</button>
-                                            </div>
-                                        </div>
-                                        <div class="input-group">
-                                            <label>Preferred Model</label>
-                                            <select id="ollama-model-select" class="btn btn-secondary" style="width: 100%; text-align: left;">
-                                                <option value="llama3">llama3 (Default)</option>
-                                                <option value="mistral">mistral</option>
-                                                <option value="phi3">phi3</option>
-                                            </select>
-                                        </div>
-                                        <button class="btn btn-primary" id="save-settings-btn" style="width: 100%;">Save Ollama Configuration</button>
-                                    </div>
-                                </div>
-
-                                <div class="settings-row-middle">
-                                    <div class="form-card settings-section">
-                                        <div class="section-header">
-                                            <h4>Model Management</h4>
-                                            <div class="header-actions">
-                                                <button class="btn btn-secondary btn-sm" id="refresh-models-btn">Refresh List</button>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="input-group">
-                                            <label>Pull New Model</label>
-                                            <div class="input-with-action">
-                                                <input type="text" id="pull-model-input" placeholder="e.g. llama3:8b">
-                                                <button class="btn btn-primary btn-sm" id="pull-model-btn">Pull Model</button>
-                                            </div>
-                                            <div id="pull-progress-container" class="hidden" style="margin-top: 12px;">
-                                                <div class="progress-bar-container">
-                                                    <div id="pull-progress-bar" class="progress-bar"></div>
-                                                </div>
-                                                <p id="pull-status-text" style="font-size: 12px; margin-top: 4px; color: var(--text-secondary);"></p>
-                                            </div>
-                                        </div>
-
-                                        <div class="db-table-wrapper" style="margin-top: 20px;">
-                                            <table id="ollama-models-table" class="minimal-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Model Name</th>
-                                                        <th>Size</th>
-                                                        <th>Modified</th>
-                                                        <th>Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="ollama-models-body">
-                                                    <!-- Loaded dynamically -->
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-card settings-section">
-                                        <div class="section-header">
-                                            <h4>Running Models (PS)</h4>
-                                            <span class="status-badge online" id="running-count-badge">0 Active</span>
-                                        </div>
-                                        <div id="running-models-list" class="model-list">
-                                            <p style="font-size: 13px; color: var(--text-secondary); text-align: center; padding: 20px;">No models currently in memory.</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="settings-row-bottom">
-                                    <aside class="settings-sidebar">
-                                        <div class="form-card">
-                                            <h4>WSL Quick Reference</h4>
-                                            <div class="reference-item">
-                                                <div class="ref-header">
-                                                    <h5>WSL Setup</h5>
-                                                    <button class="btn btn-secondary btn-xs run-cmd-btn" data-cmd='export OLLAMA_HOST="0.0.0.0" && echo "Host set to 0.0.0.0"'>Run</button>
-                                                </div>
-                                                <code class="command-box">export OLLAMA_HOST="0.0.0.0"</code>
-                                            </div>
-                                            <div class="reference-item">
-                                                <div class="ref-header">
-                                                    <h5>Pull Model</h5>
-                                                    <button class="btn btn-secondary btn-xs run-cmd-btn" data-cmd="ollama pull llama3">Run</button>
-                                                </div>
-                                                <code class="command-box">ollama pull llama3</code>
-                                            </div>
-                                            <div class="reference-item">
-                                                <div class="ref-header">
-                                                    <h5>Check Models</h5>
-                                                    <button class="btn btn-secondary btn-xs run-cmd-btn" data-cmd="ollama list">Run</button>
-                                                </div>
-                                                <code class="command-box">ollama list</code>
-                                            </div>
-                                        </div>
-                                    </aside>
-
-                                    <div class="terminal-container nested-terminal">
-                                        <div id="ollama-terminal-output" class="terminal-box">Ollama WSL Bridge Ready...</div>
-                                        <div class="terminal-input-line">
-                                            <span class="terminal-prompt">$</span>
-                                            <input type="text" id="ollama-terminal-input" placeholder="Run command..." autofocus>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- OpenAI Tab Content -->
-                        <div id="settings-openai" class="settings-tab-content">
-                            <div class="settings-grid-rows">
-                                <div class="settings-row-top">
-                                    <div class="form-card settings-section disabled-section">
-                                        <div class="section-header">
-                                            <h4>OpenAI API Settings</h4>
-                                            <span class="status-badge">Locked</span>
-                                        </div>
-                                        <div class="input-group">
-                                            <label>API Key</label>
-                                            <input type="password" placeholder="sk-..." disabled>
-                                        </div>
-                                        <p style="font-size: 13px; color: var(--text-secondary);">Direct OpenAI integration is coming in the next update.</p>
-                                    </div>
-                                </div>
-                                <div class="settings-row-bottom">
-                                    <div class="form-card">
-                                        <h4>Cloud Reference</h4>
-                                        <p style="font-size: 13px; color: var(--text-secondary);">API documentation and usage guides will appear here.</p>
-                                    </div>
-                                    <div class="terminal-container nested-terminal">
-                                        <div id="openai-terminal-output" class="terminal-box">OpenAI Console Ready...</div>
-                                        <div class="terminal-input-line">
-                                            <span class="terminal-prompt">$</span>
-                                            <input type="text" disabled placeholder="Terminal locked...">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Anthropic Tab Content -->
-                        <div id="settings-anthropic" class="settings-tab-content">
-                            <div class="settings-grid-rows">
-                                <div class="settings-row-top">
-                                    <div class="form-card settings-section disabled-section">
-                                        <div class="section-header">
-                                            <h4>Anthropic Settings</h4>
-                                            <span class="status-badge">Locked</span>
-                                        </div>
-                                        <p style="font-size: 13px; color: var(--text-secondary);">Claude integration is coming soon.</p>
-                                    </div>
-                                </div>
-                                <div class="settings-row-bottom">
-                                    <div class="form-card">
-                                        <h4>Cloud Reference</h4>
-                                        <p style="font-size: 13px; color: var(--text-secondary);">Anthropic specific tools and guides.</p>
-                                    </div>
-                                    <div class="terminal-container nested-terminal">
-                                        <div id="anthropic-terminal-output" class="terminal-box">Anthropic Console Ready...</div>
-                                        <div class="terminal-input-line">
-                                            <span class="terminal-prompt">$</span>
-                                            <input type="text" disabled placeholder="Terminal locked...">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Hugging Face Tab Content -->
-                        <div id="settings-huggingface" class="settings-tab-content">
-                            <div class="settings-grid-rows">
-                                <div class="settings-row-top">
-                                    <div class="form-card settings-section disabled-section">
-                                        <div class="section-header">
-                                            <h4>Hugging Face Connection</h4>
-                                            <span class="status-badge">Locked</span>
-                                        </div>
-                                        <p style="font-size: 13px; color: var(--text-secondary);">Connect to HF inference endpoints.</p>
-                                    </div>
-                                </div>
-                                <div class="settings-row-bottom">
-                                    <div class="form-card">
-                                        <h4>HF Reference</h4>
-                                        <p style="font-size: 13px; color: var(--text-secondary);">Model cards and endpoint guides.</p>
-                                    </div>
-                                    <div class="terminal-container nested-terminal">
-                                        <div id="hf-terminal-output" class="terminal-box">Hugging Face Console Ready...</div>
-                                        <div class="terminal-input-line">
-                                            <span class="terminal-prompt">$</span>
-                                            <input type="text" disabled placeholder="Terminal locked...">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                </div>
-            </section>
-
-            <section id="feature-map-view" class="view hidden">
-                <div class="welcome-card">
-                    <h3>Capability Architecture Map</h3>
-                    <p>Interactive force-directed graph of DOAP's integrated systems. Drag nodes to explore, click to navigate.</p>
-                </div>
-                <div id="feature-graph-container" style="width: 100%; height: 650px; background: rgba(15, 23, 42, 0.6); border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; position: relative;">
-                    <!-- Graph will be rendered here -->
-                </div>
-            </section>
+            <div class="page-container" id="app-root"></div>
         </main>
     </div>
 
@@ -361,7 +64,9 @@
         </div>
     </div>
 
+    <!-- Global Modal Component (Can be extracted later, keeping here for simplicity for now) -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/force-graph"></script>
-    <script src="renderer.js"></script>
+    <script type="module" src="index.js"></script>
 </body>
 </html>

@@ -12,7 +12,8 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      webviewTag: true
     }
   });
 
@@ -128,6 +129,61 @@ function createWindow() {
     }
   });
 
+  ipcMain.handle('ask-curiosity', async (event, query) => {
+    try {
+        const baseUrl = await db.getSetting('ollama_url') || 'http://127.0.0.1:11434';
+        const model = await db.getSetting('ollama_model') || 'llama3';
+        const scrapes = await db.getScrapes();
+        
+        if (!scrapes || scrapes.length === 0) {
+            return { success: true, response: "I don't have any scraped data yet. Please go to the 'New Scrape' tab to crawl some websites first!", context: [] };
+        }
+
+        // Simple Keyword-based Retrieval (Naive RAG)
+        const queryWords = query.toLowerCase().split(/\\W+/).filter(w => w.length > 2);
+        
+        // Score scrapes based on keyword frequency
+        const scoredScrapes = scrapes.map(scrape => {
+            const content = (scrape.content || '').toLowerCase();
+            const title = (scrape.title || '').toLowerCase();
+            let score = 0;
+            queryWords.forEach(word => {
+                if (title.includes(word)) score += 5; // Title match gives higher weight
+                const regex = new RegExp(word, 'g');
+                const matches = content.match(regex);
+                if (matches) score += matches.length;
+            });
+            return { ...scrape, score };
+        });
+
+        // Sort by score descending and take top 2
+        scoredScrapes.sort((a, b) => b.score - a.score);
+        const topContexts = scoredScrapes.filter(s => s.score > 0).slice(0, 2);
+        
+        // Fallback to recent 2 if no keyword match
+        const contextsToUse = topContexts.length > 0 ? topContexts : scrapes.slice(0, 2);
+
+        // Build the prompt context
+        let contextText = contextsToUse.map(c => `Source URL: ${c.url}\\nTitle: ${c.title}\\nContent: ${c.content.substring(0, 2500)}...`).join('\\n\\n---\\n\\n');
+
+        const systemPrompt = `You are a helpful AI assistant integrated into a desktop app. Answer the user's question using ONLY the provided context below. If the answer is not in the context, say "I don't have enough information in the scraped data to answer that."\\n\\nContext:\\n${contextText}`;
+
+        const ollamaResponse = await axios.post(`${baseUrl}/api/generate`, {
+            model: model,
+            prompt: `System: ${systemPrompt}\\n\\nUser Question: ${query}`,
+            stream: false
+        });
+
+        return { 
+            success: true, 
+            response: ollamaResponse.data.response,
+            context: contextsToUse.map(c => ({ title: c.title || c.url, url: c.url }))
+        };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('delete-model', async (event, modelName) => {
     try {
       const baseUrl = await db.getSetting('ollama_url') || 'http://127.0.0.1:11434';
@@ -179,6 +235,9 @@ function createWindow() {
     }
   });
 
+  win.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    console.log(`[Browser Console L${level}] ${message} (line ${line} in ${sourceId})`);
+  });
   // win.webContents.openDevTools();
 }
 

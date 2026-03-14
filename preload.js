@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('api', {
   getWslIp: () => ipcRenderer.invoke('get-wsl-ip'),
   checkOllama: () => ipcRenderer.invoke('check-ollama'),
   askAI: (scrapeId, prompt) => ipcRenderer.invoke('ask-ai', { scrapeId, prompt }),
+  askCuriosity: (query) => ipcRenderer.invoke('ask-curiosity', query),
   deleteModel: (name) => ipcRenderer.invoke('delete-model', name),
   pullModel: (name) => ipcRenderer.invoke('pull-model', name),
   getRunningModels: () => ipcRenderer.invoke('get-running-models'),
