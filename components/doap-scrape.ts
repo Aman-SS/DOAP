@@ -110,14 +110,17 @@ export class DoapScrape extends BaseComponent {
         `);
     }
 
-    connectedCallback() {
-        this.shadowRoot.getElementById('start-scrape-btn').addEventListener('click', () => this.startScrape());
+    connectedCallback(): void {
+        this.shadowRoot?.getElementById('start-scrape-btn')?.addEventListener('click', () => this.startScrape());
     }
 
-    async startScrape() {
-        const urlInput = this.shadowRoot.getElementById('url-input');
-        const selectorInput = this.shadowRoot.getElementById('selector-input');
-        const scrapeResult = this.shadowRoot.getElementById('scrape-result');
+    async startScrape(): Promise<void> {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+
+        const urlInput = shadow.getElementById('url-input') as HTMLInputElement;
+        const selectorInput = shadow.getElementById('selector-input') as HTMLInputElement;
+        const scrapeResult = shadow.getElementById('scrape-result') as HTMLElement;
         
         const url = urlInput.value.trim();
         if (!url) return alert('Please enter a URL');
@@ -128,7 +131,7 @@ export class DoapScrape extends BaseComponent {
         scrapeResult.classList.add('hidden');
 
         try {
-            const result = await window.api.scrapeUrl(url, selector);
+            const result = await (window as any).api.scrapeUrl(url, selector);
             this.showProgress(false);
 
             if (result.success) {
@@ -150,32 +153,40 @@ export class DoapScrape extends BaseComponent {
                     </div>
                 `;
                 
-                this.shadowRoot.getElementById('save-btn').addEventListener('click', () => this.saveScrapeResult(result));
-                this.shadowRoot.getElementById('discard-btn').addEventListener('click', () => this.discardScrape());
+                shadow.getElementById('save-btn')?.addEventListener('click', () => this.saveScrapeResult(result));
+                shadow.getElementById('discard-btn')?.addEventListener('click', () => this.discardScrape());
                 
                 scrapeResult.classList.remove('hidden');
             } else {
                 alert('Error: ' + result.error);
             }
-        } catch (err) {
+        } catch (err: any) {
             this.showProgress(false);
             alert('Failed to scrape: ' + err.message);
         }
     }
 
-    showProgress(show) {
-        this.shadowRoot.getElementById('scrape-progress').classList.toggle('hidden', !show);
-        this.shadowRoot.getElementById('start-scrape-btn').disabled = show;
+    showProgress(show: boolean): void {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+        shadow.getElementById('scrape-progress')?.classList.toggle('hidden', !show);
+        const startBtn = shadow.getElementById('start-scrape-btn') as HTMLButtonElement;
+        if (startBtn) startBtn.disabled = show;
     }
 
-    async saveScrapeResult(data) {
-        const saveBtn = this.shadowRoot.getElementById('save-btn');
-        const scrapeResult = this.shadowRoot.getElementById('scrape-result');
-        
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<span class="material-symbols-rounded">sync</span> Saving...';
+    async saveScrapeResult(data: any): Promise<void> {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
 
-        const saveResult = await window.api.saveScrape(data);
+        const saveBtn = shadow.getElementById('save-btn') as HTMLButtonElement;
+        const scrapeResult = shadow.getElementById('scrape-result') as HTMLElement;
+        
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="material-symbols-rounded">sync</span> Saving...';
+        }
+
+        const saveResult = await (window as any).api.saveScrape(data);
         if (saveResult.success) {
             scrapeResult.innerHTML = `
                 <div class="success-header">
@@ -187,26 +198,30 @@ export class DoapScrape extends BaseComponent {
                 </div>
             `;
             
-            this.shadowRoot.getElementById('ask-ai-btn').addEventListener('click', () => {
+            shadow.getElementById('ask-ai-btn')?.addEventListener('click', () => {
                 // Trigger global ask ai logic
                 window.dispatchEvent(new CustomEvent('ask-ai', { detail: { id: saveResult.id } }));
             });
             
-            this.shadowRoot.getElementById('back-btn').addEventListener('click', () => this.discardScrape());
+            shadow.getElementById('back-btn')?.addEventListener('click', () => this.discardScrape());
 
             // Notify sibling components (like home stats or history list) that DB changed
             window.dispatchEvent(new Event('history-updated'));
         } else {
             alert('Failed to save: ' + saveResult.error);
-            saveBtn.disabled = false;
-            saveBtn.innerText = 'Save to Database';
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerText = 'Save to Database';
+            }
         }
     }
 
-    discardScrape() {
-        this.shadowRoot.getElementById('scrape-result').classList.add('hidden');
-        this.shadowRoot.getElementById('url-input').value = '';
-        this.shadowRoot.getElementById('selector-input').value = '';
+    discardScrape(): void {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+        shadow.getElementById('scrape-result')?.classList.add('hidden');
+        (shadow.getElementById('url-input') as HTMLInputElement).value = '';
+        (shadow.getElementById('selector-input') as HTMLInputElement).value = '';
     }
 }
 

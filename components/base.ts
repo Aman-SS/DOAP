@@ -5,7 +5,7 @@ export class BaseComponent extends HTMLElement {
     }
 
     // Helper to inject global styles into shadow DOM
-    getSharedStyles() {
+    getSharedStyles(): string {
         return `
             <style>
                 :host {
@@ -226,20 +226,23 @@ export class BaseComponent extends HTMLElement {
         `;
     }
 
-    render(htmlContent) {
-        this.shadowRoot.innerHTML = this.getSharedStyles() + htmlContent;
+    render(htmlContent: string): void {
+        const shadowRoot = this.shadowRoot;
+        if (shadowRoot) {
+            shadowRoot.innerHTML = this.getSharedStyles() + htmlContent;
+        }
     }
 
-    escapeHTML(str) {
+    escapeHTML(str: string | null | undefined): string {
         if (!str) return '';
         return str.replace(/[&<>"']/g, function(m) {
-            return {
+            return ({
                 '&': '&amp;',
                 '<': '&lt;',
                 '>': '&gt;',
                 '"': '&quot;',
                 "'": '&#039;'
-            }[m];
+            } as Record<string, string>)[m];
         });
     }
 }

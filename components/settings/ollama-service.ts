@@ -5,7 +5,7 @@ export class OllamaService extends BaseComponent {
         super();
     }
 
-    connectedCallback() {
+    connectedCallback(): void {
         this.render(`
             <div class="form-card settings-section">
                 <div class="section-header">
@@ -31,33 +31,39 @@ export class OllamaService extends BaseComponent {
         this.checkStatus();
     }
 
-    setupEventListeners() {
-        this.shadowRoot.getElementById('start-btn').addEventListener('click', () => this.start());
-        this.shadowRoot.getElementById('stop-btn').addEventListener('click', () => this.stop());
+    private setupEventListeners(): void {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+
+        shadow.getElementById('start-btn')?.addEventListener('click', () => this.start());
+        shadow.getElementById('stop-btn')?.addEventListener('click', () => this.stop());
         
         // Listen for global status checks
         window.addEventListener('check-ollama-status', () => this.checkStatus());
     }
 
-    async checkStatus() {
-        if (!window.api) return;
-        const statusEl = this.shadowRoot.getElementById('service-status');
+    async checkStatus(): Promise<void> {
+        if (!(window as any).api) return;
+        const statusEl = this.shadowRoot?.getElementById('service-status');
+        if (!statusEl) return;
+
         try {
-            const result = await window.api.checkOllama();
+            const result = await (window as any).api.checkOllama();
             this.updateStatusUI(statusEl, result.online ? 'Running' : 'Stopped', result.online);
         } catch (e) {
             this.updateStatusUI(statusEl, 'Offline', false);
         }
     }
 
-    updateStatusUI(el, text, online) {
-        if (!el) return;
+    private updateStatusUI(el: HTMLElement, text: string, online: boolean): void {
         el.innerText = text;
         el.className = `status-badge ${online ? 'online' : 'offline'}`;
     }
 
-    async start() {
-        const btn = this.shadowRoot.getElementById('start-btn');
+    async start(): Promise<void> {
+        const btn = this.shadowRoot?.getElementById('start-btn') as HTMLButtonElement;
+        if (!btn) return;
+
         btn.disabled = true;
         btn.innerHTML = '<span class="material-symbols-rounded">sync</span> Starting...';
         
@@ -65,7 +71,7 @@ export class OllamaService extends BaseComponent {
             detail: { command: 'ollama serve', isPrompt: true } 
         }));
 
-        const res = await window.api.startOllamaService();
+        const res = await (window as any).api.startOllamaService();
         if (res.success) {
             setTimeout(() => {
                 this.checkStatus();
@@ -79,9 +85,11 @@ export class OllamaService extends BaseComponent {
         }
     }
 
-    async stop() {
+    async stop(): Promise<void> {
         if (!confirm('Are you sure you want to stop the Ollama service?')) return;
-        const btn = this.shadowRoot.getElementById('stop-btn');
+        const btn = this.shadowRoot?.getElementById('stop-btn') as HTMLButtonElement;
+        if (!btn) return;
+
         btn.disabled = true;
         btn.innerHTML = '<span class="material-symbols-rounded">sync</span> Stopping...';
 
@@ -89,7 +97,7 @@ export class OllamaService extends BaseComponent {
             detail: { command: 'pkill ollama', isPrompt: true } 
         }));
 
-        const res = await window.api.stopOllamaService();
+        const res = await (window as any).api.stopOllamaService();
         if (res.success) {
             setTimeout(() => {
                 this.checkStatus();

@@ -1,8 +1,14 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
-const path = require('path');
-const db = require('./db');
-const { crawlWebsite } = require('./scraper');
-const axios = require('axios');
+console.log('MAIN_PROCESS_STARTING');
+import { app, BrowserWindow, ipcMain } from 'electron';
+import * as path from 'path';
+import database from './database.js';
+import { crawlWebsite } from './scraper.js';
+import axios from 'axios';
+import { spawn, exec } from 'child_process';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -10,58 +16,57 @@ function createWindow() {
     height: 800,
     backgroundColor: '#0f172a', // Premium dark background
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       webviewTag: true
     }
   });
 
-  win.loadFile('index.html');
+  win.loadFile(path.join(__dirname, '../index.html'));
   win.maximize();
   
   // IPC Handlers
-  ipcMain.handle('scrape-url', async (event, { url, selector }) => {
+  ipcMain.handle('scrape-url', async (event, { url, selector }: { url: string, selector: string | null }) => {
     try {
       const data = await crawlWebsite(url, selector);
       return { success: true, ...data };
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, error: error.message };
     }
   });
 
-  ipcMain.handle('save-scrape', async (event, data) => {
+  ipcMain.handle('save-scrape', async (event, data: any) => {
     try {
-      const id = await db.saveScrape(data);
+      const id = await database.saveScrape(data);
       return { success: true, id };
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, error: error.message };
     }
   });
 
   ipcMain.handle('get-history', async () => {
-    return await db.getScrapes();
+    return await database.getScrapes();
   });
 
-  ipcMain.handle('get-table-data', async (event, tableName) => {
+  ipcMain.handle('get-table-data', async (event, tableName: string) => {
     try {
-      return await db.getRawTableData(tableName);
-    } catch (error) {
+      return await database.getRawTableData(tableName);
+    } catch (error: any) {
       return { success: false, error: error.message };
     }
   });
 
-  ipcMain.handle('delete-scrape', async (event, id) => {
+  ipcMain.handle('delete-scrape', async (event, id: number) => {
     try {
-      return await db.deleteScrape(id);
-    } catch (error) {
+      return await database.deleteScrape(id);
+    } catch (error: any) {
       return { success: false, error: error.message };
     }
   });
 
-  ipcMain.handle('run-wsl-command', async (event, command) => {
+  ipcMain.handle('run-wsl-command', async (event, command: string) => {
     return new Promise((resolve) => {
-      const { exec } = require('child_process');
       exec(`wsl ${command}`, (error, stdout, stderr) => {
         resolve({
           success: !error,
@@ -73,8 +78,7 @@ function createWindow() {
     });
   });
 
-  ipcMain.on('terminal-command-stream', (event, command) => {
-    const { spawn } = require('child_process');
+  ipcMain.on('terminal-command-stream', (event, command: string) => {
     try {
       // Use cmd /c wsl to better handle combined command strings if needed, 
       // or just spawn wsl with arguments
@@ -92,7 +96,7 @@ function createWindow() {
       child.on('close', (code) => {
         event.sender.send('terminal-stream-exit', code);
       });
-    } catch (e) {
+    } catch (e: any) {
       event.sender.send('terminal-stream-data', `Error spawning command: ${e.message}\n`);
       event.sender.send('terminal-stream-exit', 1);
     }
@@ -100,7 +104,6 @@ function createWindow() {
 
   ipcMain.handle('get-wsl-ip', async () => {
     return new Promise((resolve) => {
-      const { exec } = require('child_process');
       exec(`wsl hostname -I`, (error, stdout) => {
         if (error) {
           resolve({ success: false, error: error.message });
@@ -112,21 +115,21 @@ function createWindow() {
     });
   });
 
-  ipcMain.handle('get-setting', async (event, key) => {
-    return await db.getSetting(key);
+  ipcMain.handle('get-setting', async (event, key: string) => {
+    return await database.getSetting(key);
   });
 
-  ipcMain.handle('update-setting', async (event, { key, value }) => {
+  ipcMain.handle('update-setting', async (event, { key, value }: { key: string, value: string }) => {
     try {
-      return await db.setSetting(key, value);
-    } catch (error) {
+      return await database.setSetting(key, value);
+    } catch (error: any) {
       return { success: false, error: error.message };
     }
   });
 
   ipcMain.handle('check-ollama', async () => {
     try {
-      const baseUrl = await db.getSetting('ollama_url') || 'http://127.0.0.1:11434';
+      const baseUrl = await database.getSetting('ollama_url') || 'http://127.0.0.1:11434';
       const response = await axios.get(`${baseUrl}/api/tags`);
       return { online: true, models: response.data.models };
     } catch (e) {
@@ -134,11 +137,11 @@ function createWindow() {
     }
   });
 
-  ipcMain.handle('ask-ai', async (event, { scrapeId, prompt }) => {
+  ipcMain.handle('ask-ai', async (event, { scrapeId, prompt }: { scrapeId: number, prompt: string }) => {
     try {
-        const baseUrl = await db.getSetting('ollama_url') || 'http://127.0.0.1:11434';
-        const model = await db.getSetting('ollama_model') || 'llama3';
-        const scrapes = await db.getScrapes();
+        const baseUrl = await database.getSetting('ollama_url') || 'http://127.0.0.1:11434';
+        const model = await database.getSetting('ollama_model') || 'llama3';
+        const scrapes = await database.getScrapes();
         const scrape = scrapes.find(s => s.id === scrapeId);
         if (!scrape) throw new Error("Scrape session not found");
 
@@ -149,23 +152,23 @@ function createWindow() {
         });
 
         return { success: true, response: ollamaResponse.data.response };
-    } catch (error) {
+    } catch (error: any) {
         return { success: false, error: error.message };
     }
   });
 
-  ipcMain.handle('ask-curiosity', async (event, query) => {
+  ipcMain.handle('ask-curiosity', async (event, query: string) => {
     try {
-        const baseUrl = await db.getSetting('ollama_url') || 'http://127.0.0.1:11434';
-        const model = await db.getSetting('ollama_model') || 'llama3';
-        const scrapes = await db.getScrapes();
+        const baseUrl = await database.getSetting('ollama_url') || 'http://127.0.0.1:11434';
+        const model = await database.getSetting('ollama_model') || 'llama3';
+        const scrapes = await database.getScrapes();
         
         if (!scrapes || scrapes.length === 0) {
             return { success: true, response: "I don't have any scraped data yet. Please go to the 'New Scrape' tab to crawl some websites first!", context: [] };
         }
 
         // Simple Keyword-based Retrieval (Naive RAG)
-        const queryWords = query.toLowerCase().split(/\\W+/).filter(w => w.length > 2);
+        const queryWords = query.toLowerCase().split(/\W+/).filter(w => w.length > 2);
         
         // Score scrapes based on keyword frequency
         const scoredScrapes = scrapes.map(scrape => {
@@ -189,13 +192,13 @@ function createWindow() {
         const contextsToUse = topContexts.length > 0 ? topContexts : scrapes.slice(0, 2);
 
         // Build the prompt context
-        let contextText = contextsToUse.map(c => `Source URL: ${c.url}\\nTitle: ${c.title}\\nContent: ${c.content.substring(0, 2500)}...`).join('\\n\\n---\\n\\n');
+        let contextText = contextsToUse.map(c => `Source URL: ${c.url}\nTitle: ${c.title}\nContent: ${c.content.substring(0, 2500)}...`).join('\n\n---\n\n');
 
-        const systemPrompt = `You are a helpful AI assistant integrated into a desktop app. Answer the user's question using ONLY the provided context below. If the answer is not in the context, say "I don't have enough information in the scraped data to answer that."\\n\\nContext:\\n${contextText}`;
+        const systemPrompt = `You are a helpful AI assistant integrated into a desktop app. Answer the user's question using ONLY the provided context below. If the answer is not in the context, say "I don't have enough information in the scraped data to answer that."\n\nContext:\n${contextText}`;
 
         const ollamaResponse = await axios.post(`${baseUrl}/api/generate`, {
             model: model,
-            prompt: `System: ${systemPrompt}\\n\\nUser Question: ${query}`,
+            prompt: `System: ${systemPrompt}\n\nUser Question: ${query}`,
             stream: false
         });
 
@@ -204,29 +207,29 @@ function createWindow() {
             response: ollamaResponse.data.response,
             context: contextsToUse.map(c => ({ title: c.title || c.url, url: c.url }))
         };
-    } catch (error) {
+    } catch (error: any) {
         return { success: false, error: error.message };
     }
   });
 
-  ipcMain.handle('delete-model', async (event, modelName) => {
+  ipcMain.handle('delete-model', async (event, modelName: string) => {
     try {
-      const baseUrl = await db.getSetting('ollama_url') || 'http://127.0.0.1:11434';
+      const baseUrl = await database.getSetting('ollama_url') || 'http://127.0.0.1:11434';
       await axios.delete(`${baseUrl}/api/delete`, { data: { name: modelName } });
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, error: error.message };
     }
   });
 
-  ipcMain.handle('pull-model', async (event, modelName) => {
+  ipcMain.handle('pull-model', async (event, modelName: string) => {
     try {
-      const baseUrl = await db.getSetting('ollama_url') || 'http://127.0.0.1:11434';
+      const baseUrl = await database.getSetting('ollama_url') || 'http://127.0.0.1:11434';
       const response = await axios.post(`${baseUrl}/api/pull`, { name: modelName, stream: true }, { responseType: 'stream' });
       
-      response.data.on('data', chunk => {
-        const lines = chunk.toString().split('\n').filter(l => l.trim());
-        lines.forEach(line => {
+      response.data.on('data', (chunk: any) => {
+        const lines = chunk.toString().split('\n').filter((l: string) => l.trim());
+        lines.forEach((line: string) => {
           try {
             const json = JSON.parse(line);
             event.sender.send('pull-progress', json);
@@ -235,34 +238,33 @@ function createWindow() {
       });
 
       return { success: true };
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, error: error.message };
     }
   });
 
   ipcMain.handle('get-running-models', async () => {
     try {
-      const baseUrl = await db.getSetting('ollama_url') || 'http://127.0.0.1:11434';
+      const baseUrl = await database.getSetting('ollama_url') || 'http://127.0.0.1:11434';
       const response = await axios.get(`${baseUrl}/api/ps`);
       return { success: true, models: response.data.models };
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, error: error.message };
     }
   });
 
-  ipcMain.handle('get-model-info', async (event, modelName) => {
+  ipcMain.handle('get-model-info', async (event, modelName: string) => {
     try {
-      const baseUrl = await db.getSetting('ollama_url') || 'http://127.0.0.1:11434';
+      const baseUrl = await database.getSetting('ollama_url') || 'http://127.0.0.1:11434';
       const response = await axios.post(`${baseUrl}/api/show`, { name: modelName });
       return { success: true, info: response.data };
-    } catch (error) {
+    } catch (error: any) {
       return { success: false, error: error.message };
     }
   });
 
   ipcMain.handle('start-ollama-service', async () => {
     return new Promise((resolve) => {
-      const { spawn } = require('child_process');
       // Execute 'ollama serve' in WSL. Use detached to let it survive parent exit if needed,
       // and stdio ignore to avoid bloat.
       try {
@@ -272,7 +274,7 @@ function createWindow() {
         });
         child.unref();
         resolve({ success: true, message: 'Ollama service start command sent' });
-      } catch (error) {
+      } catch (error: any) {
         resolve({ success: false, error: error.message });
       }
     });
@@ -280,10 +282,9 @@ function createWindow() {
 
   ipcMain.handle('stop-ollama-service', async () => {
     return new Promise((resolve) => {
-      const { exec } = require('child_process');
       // Ubuntu/Debian usually has pkill. Fallback to killall if needed.
       exec('wsl pkill ollama', (error, stdout, stderr) => {
-        if (error && error.code !== 1) { // code 1 usually means process not found
+        if (error && (error as any).code !== 1) { // code 1 usually means process not found
           resolve({ success: false, error: error.message || stderr });
         } else {
           resolve({ success: true, message: 'Ollama service stopped' });

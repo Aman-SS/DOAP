@@ -15,8 +15,8 @@ DOAP is a high-performance, local-first Desktop Application built with Electron.
 
 ## 🛠 Tech Stack
 
-- **Frontend**: Vanilla HTML5, CSS3 (Glassmorphism), JavaScript (ES6+)
-- **Backend**: Electron.js, Node.js
+- **Frontend**: Vanilla HTML5, CSS3, TypeScript (Web Components)
+- **Backend**: Electron.js, Node.js, TypeScript (ESM)
 - **Database**: SQLite3
 - **Visualization**: Force-Graph.js (Canvas-based)
 - **AI Integration**: Ollama API
@@ -40,10 +40,21 @@ DOAP is a high-performance, local-first Desktop Application built with Electron.
    npm install
    ```
 
-3. **Start the application**:
+3. **Compile TypeScript**:
+   ```bash
+   npm run compile
+   ```
+
+4. **Start the application**:
    ```bash
    npm start
    ```
+
+## 🛠 Development Commands
+
+- `npm run compile`: Compiles TypeScript files to the `dist-ts` folder.
+- `npm run dev`: Compiles and then starts the Electron application.
+- `npm run build`: Compiles and builds the production installer using electron-builder.
 
 ## 🔒 Privacy & Security
 

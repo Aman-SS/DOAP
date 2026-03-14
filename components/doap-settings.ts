@@ -123,19 +123,22 @@ export class DoapSettings extends BaseComponent {
         `);
     }
 
-    connectedCallback() {
+    connectedCallback(): void {
         this.setupTabs();
     }
 
-    setupTabs() {
-        const tabs = this.shadowRoot.querySelectorAll('.settings-tab-btn');
+    private setupTabs(): void {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+
+        const tabs = shadow.querySelectorAll('.settings-tab-btn');
         tabs.forEach(btn => {
             btn.addEventListener('click', () => {
                 const tabId = btn.getAttribute('data-tab');
                 tabs.forEach(t => t.classList.remove('active'));
                 btn.classList.add('active');
                 
-                this.shadowRoot.querySelectorAll('.settings-tab-content').forEach(content => {
+                shadow.querySelectorAll('.settings-tab-content').forEach(content => {
                     content.classList.toggle('active', content.id === `settings-${tabId}`);
                 });
 

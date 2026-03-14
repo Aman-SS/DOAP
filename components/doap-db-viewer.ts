@@ -85,24 +85,28 @@ export class DoapDbViewer extends BaseComponent {
         `);
     }
 
-    connectedCallback() {
+    connectedCallback(): void {
         this.loadDbViewer();
         
-        this.shadowRoot.getElementById('refresh-btn').addEventListener('click', () => this.loadDbViewer());
-        this.shadowRoot.getElementById('table-select').addEventListener('change', () => this.loadDbViewer());
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+
+        shadow.getElementById('refresh-btn')?.addEventListener('click', () => this.loadDbViewer());
+        shadow.getElementById('table-select')?.addEventListener('change', () => this.loadDbViewer());
         
         window.addEventListener('history-updated', () => this.loadDbViewer());
     }
 
-    async loadDbViewer() {
-        if (!window.api) return;
+    async loadDbViewer(): Promise<void> {
+        const shadow = this.shadowRoot;
+        if (!shadow || !(window as any).api) return;
         
-        const tableSelect = this.shadowRoot.getElementById('table-select');
+        const tableSelect = shadow.getElementById('table-select') as HTMLSelectElement;
         const tableName = tableSelect.value;
-        const data = await window.api.getTableData(tableName);
+        const data = await (window as any).api.getTableData(tableName);
         
-        const tableHead = this.shadowRoot.getElementById('db-table-head');
-        const tableBody = this.shadowRoot.getElementById('db-table-body');
+        const tableHead = shadow.getElementById('db-table-head') as HTMLElement;
+        const tableBody = shadow.getElementById('db-table-body') as HTMLElement;
         
         if (!data || data.length === 0) {
             tableHead.innerHTML = '<th>No data found</th>';
@@ -117,13 +121,14 @@ export class DoapDbViewer extends BaseComponent {
         
         tableBody.innerHTML = '';
         
-        data.forEach(row => {
+        data.forEach((row: any) => {
             const tr = document.createElement('tr');
             
             // Generate columns
-            const colsHtml = displayColumns.map(col => `<td>${row[col]}</td>`).join('');
+            const colsHtml = displayColumns.map(col => `<td>${this.escapeHTML(String(row[col]))}</td>`).join('');
             
             // Actions Setup
+            const actionsTd = document.createElement('td');
             const actionsDiv = document.createElement('div');
             actionsDiv.style.display = 'flex';
             actionsDiv.style.gap = '8px';
@@ -153,7 +158,7 @@ export class DoapDbViewer extends BaseComponent {
             deleteBtn.innerText = 'Delete';
             deleteBtn.onclick = async () => {
                 if (!confirm('Delete this record?')) return;
-                const result = await window.api.deleteScrape(row.id);
+                const result = await (window as any).api.deleteScrape(row.id);
                 if (result) {
                     window.dispatchEvent(new Event('history-updated'));
                 } else {
@@ -162,12 +167,10 @@ export class DoapDbViewer extends BaseComponent {
             };
             
             actionsDiv.appendChild(deleteBtn);
-
-            const tdActions = document.createElement('td');
-            tdActions.appendChild(actionsDiv);
+            actionsTd.appendChild(actionsDiv);
             
             tr.innerHTML = colsHtml;
-            tr.appendChild(tdActions);
+            tr.appendChild(actionsTd);
             
             tableBody.appendChild(tr);
         });

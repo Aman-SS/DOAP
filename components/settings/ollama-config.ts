@@ -1,12 +1,13 @@
 import { BaseComponent } from '../base.js';
 
 export class OllamaConfig extends BaseComponent {
+    private preferredModel: string = 'llama3';
+
     constructor() {
         super();
-        this.preferredModel = 'llama3';
     }
 
-    async connectedCallback() {
+    async connectedCallback(): Promise<void> {
         this.render(`
             <div class="form-card settings-section">
                 <div class="section-header">
@@ -41,31 +42,42 @@ export class OllamaConfig extends BaseComponent {
         this.checkStatus();
     }
 
-    setupEventListeners() {
-        this.shadowRoot.getElementById('save-btn').addEventListener('click', () => this.save());
-        this.shadowRoot.getElementById('test-btn').addEventListener('click', () => this.test());
-        this.shadowRoot.getElementById('find-wsl-btn').addEventListener('click', () => this.findWsl());
+    private setupEventListeners(): void {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+
+        shadow.getElementById('save-btn')?.addEventListener('click', () => this.save());
+        shadow.getElementById('test-btn')?.addEventListener('click', () => this.test());
+        shadow.getElementById('find-wsl-btn')?.addEventListener('click', () => this.findWsl());
         
         window.addEventListener('ollama-service-updated', () => this.checkStatus());
-        window.addEventListener('ollama-models-refreshed', (e) => this.updateModelsDropdown(e.detail.models));
+        window.addEventListener('ollama-models-refreshed', (e: any) => this.updateModelsDropdown(e.detail.models));
     }
 
-    async loadSettings() {
-        if (!window.api) return;
-        const url = await window.api.getSetting('ollama_url');
-        const model = await window.api.getSetting('ollama_model');
-        if (url) this.shadowRoot.getElementById('url-input').value = url;
+    async loadSettings(): Promise<void> {
+        if (!(window as any).api) return;
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+
+        const url = await (window as any).api.getSetting('ollama_url');
+        const model = await (window as any).api.getSetting('ollama_model');
+        const urlInput = shadow.getElementById('url-input') as HTMLInputElement;
+        const modelSelect = shadow.getElementById('model-select') as HTMLSelectElement;
+
+        if (url && urlInput) urlInput.value = url;
         if (model) {
             this.preferredModel = model;
-            this.shadowRoot.getElementById('model-select').value = model;
+            if (modelSelect) modelSelect.value = model;
         }
     }
 
-    async checkStatus() {
-        if (!window.api) return;
-        const statusEl = this.shadowRoot.getElementById('api-status');
+    async checkStatus(): Promise<void> {
+        if (!(window as any).api) return;
+        const statusEl = this.shadowRoot?.getElementById('api-status');
+        if (!statusEl) return;
+
         try {
-            const result = await window.api.checkOllama();
+            const result = await (window as any).api.checkOllama();
             this.updateStatusUI(statusEl, result.online ? 'Connected' : 'Offline', result.online);
             if (result.online && result.models) {
                 this.updateModelsDropdown(result.models);
@@ -75,14 +87,13 @@ export class OllamaConfig extends BaseComponent {
         }
     }
 
-    updateStatusUI(el, text, online) {
-        if (!el) return;
+    private updateStatusUI(el: HTMLElement, text: string, online: boolean): void {
         el.innerText = text;
         el.className = `status-badge ${online ? 'online' : 'offline'}`;
     }
 
-    updateModelsDropdown(models) {
-        const select = this.shadowRoot.getElementById('model-select');
+    private updateModelsDropdown(models: any[]): void {
+        const select = this.shadowRoot?.getElementById('model-select') as HTMLSelectElement;
         if (!select || !models) return;
         
         // Store current value to re-select it
@@ -105,13 +116,19 @@ export class OllamaConfig extends BaseComponent {
         }
     }
 
-    async test() {
-        const btn = this.shadowRoot.getElementById('test-btn');
-        const url = this.shadowRoot.getElementById('url-input').value.trim();
+    async test(): Promise<void> {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+
+        const btn = shadow.getElementById('test-btn') as HTMLElement;
+        const urlInput = shadow.getElementById('url-input') as HTMLInputElement;
+        const url = urlInput.value.trim();
+
+        const originalText = btn.innerText;
         btn.innerText = 'Testing...';
-        await window.api.updateSetting('ollama_url', url);
-        const status = await window.api.checkOllama();
-        btn.innerText = 'Test Connection';
+        await (window as any).api.updateSetting('ollama_url', url);
+        const status = await (window as any).api.checkOllama();
+        btn.innerText = originalText;
         
         if (status.online) {
             alert('Success! Ollama is reachable.');
@@ -122,25 +139,36 @@ export class OllamaConfig extends BaseComponent {
         }
     }
 
-    async findWsl() {
-        const btn = this.shadowRoot.getElementById('find-wsl-btn');
+    async findWsl(): Promise<void> {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+
+        const btn = shadow.getElementById('find-wsl-btn') as HTMLButtonElement;
         btn.disabled = true;
+        const originalText = btn.innerText;
         btn.innerText = 'Finding...';
-        const result = await window.api.getWslIp();
+        const result = await (window as any).api.getWslIp();
         btn.disabled = false;
-        btn.innerText = 'Auto-find WSL';
+        btn.innerText = originalText;
         if (result.success && result.ip) {
-            this.shadowRoot.getElementById('url-input').value = `http://${result.ip}:11434`;
+            const urlInput = shadow.getElementById('url-input') as HTMLInputElement;
+            if (urlInput) urlInput.value = `http://${result.ip}:11434`;
         }
     }
 
-    async save() {
-        const url = this.shadowRoot.getElementById('url-input').value.trim();
-        const model = this.shadowRoot.getElementById('model-select').value;
+    async save(): Promise<void> {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+
+        const urlInput = shadow.getElementById('url-input') as HTMLInputElement;
+        const modelSelect = shadow.getElementById('model-select') as HTMLSelectElement;
+        const url = urlInput.value.trim();
+        const model = modelSelect.value;
+
         if (!url) return alert('Please enter a URL');
         
-        await window.api.updateSetting('ollama_url', url);
-        await window.api.updateSetting('ollama_model', model);
+        await (window as any).api.updateSetting('ollama_url', url);
+        await (window as any).api.updateSetting('ollama_model', model);
         
         alert('Settings saved successfully!');
         this.checkStatus();

@@ -1,9 +1,10 @@
-const axios = require('axios');
-const { Readability } = require('@mozilla/readability');
-const { JSDOM } = require('jsdom');
-const cheerio = require('cheerio');
+import axios from 'axios';
+import { Readability } from '@mozilla/readability';
+import { JSDOM } from 'jsdom';
+import * as cheerio from 'cheerio';
+import { ScrapeData } from './database.js';
 
-async function crawlWebsite(url, selector = null) {
+export async function crawlWebsite(url: string, selector: string | null = null): Promise<ScrapeData> {
     try {
         const response = await axios.get(url, {
             headers: {
@@ -32,8 +33,8 @@ async function crawlWebsite(url, selector = null) {
             const article = reader.parse();
             
             if (article) {
-                extractedContent = article.textContent.trim();
-                markdown = article.content; // Sanitized HTML
+                extractedContent = (article.textContent || "").trim();
+                markdown = article.content || ""; // Sanitized HTML
                 title = article.title || title;
             } else {
                 extractedContent = "Could not parse main content automatically.";
@@ -52,5 +53,3 @@ async function crawlWebsite(url, selector = null) {
         throw error;
     }
 }
-
-module.exports = { crawlWebsite };

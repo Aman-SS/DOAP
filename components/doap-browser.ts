@@ -1,6 +1,15 @@
 import { BaseComponent } from './base.js';
 
 export class DoapBrowser extends BaseComponent {
+    private webview: any;
+    private urlInput: HTMLInputElement | null = null;
+    private backBtn: HTMLButtonElement | null = null;
+    private forwardBtn: HTMLButtonElement | null = null;
+    private reloadBtn: HTMLButtonElement | null = null;
+    private loadingOverlay: HTMLElement | null = null;
+    private scrapeBtn: HTMLElement | null = null;
+    private aiBtn: HTMLElement | null = null;
+
     constructor() {
         super();
         this.render(`
@@ -188,77 +197,83 @@ export class DoapBrowser extends BaseComponent {
         `);
     }
 
-    connectedCallback() {
-        this.webview = this.shadowRoot.getElementById('browser-webview');
-        this.urlInput = this.shadowRoot.getElementById('url-input');
-        this.backBtn = this.shadowRoot.getElementById('back-btn');
-        this.forwardBtn = this.shadowRoot.getElementById('forward-btn');
-        this.reloadBtn = this.shadowRoot.getElementById('reload-btn');
-        this.loadingOverlay = this.shadowRoot.getElementById('loading-overlay');
-        this.scrapeBtn = this.shadowRoot.getElementById('scrape-page-btn');
-        this.aiBtn = this.shadowRoot.getElementById('ai-analyze-btn');
+    connectedCallback(): void {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+
+        this.webview = shadow.getElementById('browser-webview');
+        this.urlInput = shadow.getElementById('url-input') as HTMLInputElement;
+        this.backBtn = shadow.getElementById('back-btn') as HTMLButtonElement;
+        this.forwardBtn = shadow.getElementById('forward-btn') as HTMLButtonElement;
+        this.reloadBtn = shadow.getElementById('reload-btn') as HTMLButtonElement;
+        this.loadingOverlay = shadow.getElementById('loading-overlay') as HTMLElement;
+        this.scrapeBtn = shadow.getElementById('scrape-page-btn') as HTMLElement;
+        this.aiBtn = shadow.getElementById('ai-analyze-btn') as HTMLElement;
 
         const updateNavButtons = () => {
-            if (this.webview) {
+            if (this.webview && this.backBtn && this.forwardBtn) {
                 this.backBtn.disabled = !this.webview.canGoBack();
                 this.forwardBtn.disabled = !this.webview.canGoForward();
             }
         };
 
-        this.backBtn.addEventListener('click', () => {
+        this.backBtn?.addEventListener('click', () => {
             if (this.webview && this.webview.canGoBack()) {
                 this.webview.goBack();
             }
         });
 
-        this.forwardBtn.addEventListener('click', () => {
+        this.forwardBtn?.addEventListener('click', () => {
             if (this.webview && this.webview.canGoForward()) {
                 this.webview.goForward();
             }
         });
 
-        this.reloadBtn.addEventListener('click', () => {
+        this.reloadBtn?.addEventListener('click', () => {
             if (this.webview) {
                 this.webview.reload();
             }
         });
 
-        this.urlInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
+        this.urlInput?.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (e.key === 'Enter' && this.urlInput && this.webview) {
                 const query = this.urlInput.value.trim();
                 const finalUrl = this.normalizeUrl(query);
                 this.webview.loadURL(finalUrl);
             }
         });
 
-        this.webview.addEventListener('did-start-loading', () => {
-            this.loadingOverlay.classList.remove('hidden');
+        this.webview?.addEventListener('did-start-loading', () => {
+            this.loadingOverlay?.classList.remove('hidden');
         });
 
         const handleStopLoading = () => {
-            this.loadingOverlay.classList.add('hidden');
-            this.urlInput.value = this.webview.getURL();
+            this.loadingOverlay?.classList.add('hidden');
+            if (this.urlInput && this.webview) {
+                this.urlInput.value = this.webview.getURL();
+            }
             updateNavButtons();
         };
 
-        this.webview.addEventListener('did-stop-loading', handleStopLoading);
-        this.webview.addEventListener('did-navigate', updateNavButtons);
-        this.webview.addEventListener('did-navigate-in-page', updateNavButtons);
+        this.webview?.addEventListener('did-stop-loading', handleStopLoading);
+        this.webview?.addEventListener('did-navigate', updateNavButtons);
+        this.webview?.addEventListener('did-navigate-in-page', updateNavButtons);
 
-        this.scrapeBtn.addEventListener('click', () => this.handleBrowserScrape());
-        this.aiBtn.addEventListener('click', () => this.handleBrowserAI());
+        this.scrapeBtn?.addEventListener('click', () => this.handleBrowserScrape());
+        this.aiBtn?.addEventListener('click', () => this.handleBrowserAI());
 
         // Initial load if passed via attribute
         const initialUrl = this.getAttribute('url');
         if (initialUrl && initialUrl !== 'about:blank') {
-            this.urlInput.value = initialUrl;
-            this.webview.addEventListener('dom-ready', () => {
+            if (this.urlInput) this.urlInput.value = initialUrl;
+            this.webview?.addEventListener('dom-ready', () => {
                 this.webview.loadURL(this.normalizeUrl(initialUrl));
             }, { once: true });
         }
     }
 
-    normalizeUrl(url) {
+    private normalizeUrl(url: string | null): string {
+        if (!url) return 'about:blank';
         url = url.trim();
         if (!url) return 'about:blank';
         if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -270,7 +285,8 @@ export class DoapBrowser extends BaseComponent {
         return 'https://www.google.com/search?q=' + encodeURIComponent(url);
     }
 
-    async handleBrowserScrape() {
+    async handleBrowserScrape(): Promise<void> {
+        if (!this.webview) return;
         const url = this.webview.getURL();
         if (url === 'about:blank') return;
 
@@ -280,7 +296,7 @@ export class DoapBrowser extends BaseComponent {
             const title = await this.webview.executeJavaScript('document.title');
             
             // Call the same save-scrape logic via IPC
-            const result = await window.api.saveScrape({
+            const result = await (window as any).api.saveScrape({
                 url,
                 title,
                 content,
@@ -292,18 +308,19 @@ export class DoapBrowser extends BaseComponent {
             } else {
                 alert('Scrape failed: ' + result.error);
             }
-        } catch (e) {
+        } catch (e: any) {
             alert('Error scraping: ' + e.message);
         }
     }
 
-    async handleBrowserAI() {
+    async handleBrowserAI(): Promise<void> {
+        if (!this.webview) return;
         const url = this.webview.getURL();
         if (url === 'about:blank') return;
         
         try {
             const content = await this.webview.executeJavaScript('document.body.innerText');
-            const result = await window.api.askAI({
+            const result = await (window as any).api.askAI({
                 scrapeId: null, // Temporary/Current session
                 prompt: `I am currently viewing this page: ${url}. Please summarize the main points of this content: ${content.substring(0, 10000)}`
             });
@@ -315,7 +332,7 @@ export class DoapBrowser extends BaseComponent {
             } else {
                 alert("AI Analysis Failed: " + result.error);
             }
-        } catch (e) {
+        } catch (e: any) {
             alert("Error: " + e.message);
         }
     }

@@ -88,28 +88,30 @@ export class DoapCuriosity extends BaseComponent {
         `);
     }
 
-    connectedCallback() {
-        const askBtn = this.shadowRoot.getElementById('ask-curiosity-btn');
-        const input = this.shadowRoot.getElementById('curiosity-input');
+    connectedCallback(): void {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
 
-        askBtn.addEventListener('click', () => this.askAI());
-        input.addEventListener('keydown', (e) => {
+        const askBtn = shadow.getElementById('ask-curiosity-btn') as HTMLButtonElement;
+        const input = shadow.getElementById('curiosity-input') as HTMLInputElement;
+
+        askBtn?.addEventListener('click', () => this.askAI());
+        input?.addEventListener('keydown', (e: KeyboardEvent) => {
             if (e.key === 'Enter') this.askAI();
         });
 
         // Expose a way to be triggered globally (e.g. via "Plan with AI" action)
-        window.addEventListener('ask-ai', (e) => {
+        window.addEventListener('ask-ai', (e: any) => {
             if (e.detail && e.detail.id) {
-                // If the user came from a specific scrape context, auto-fill a basic prompt or handle it in a modal
-                // Currently, main.js has an independent 'ask-ai' IPC call. We can prompt the user here or trigger the main process.
                 this.handleScrapeSpecificAsk(e.detail.id);
             }
         });
 
         // Delegate clicks for resolution links
-        this.shadowRoot.getElementById('curiosity-error').addEventListener('click', (e) => {
-            if (e.target.classList.contains('resolution-link')) {
-                const view = e.target.dataset.view;
+        shadow.getElementById('curiosity-error')?.addEventListener('click', (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            if (target.classList.contains('resolution-link')) {
+                const view = target.dataset.view;
                 if (view) {
                     window.dispatchEvent(new CustomEvent('navigate', {
                         detail: { view: view }
@@ -119,13 +121,13 @@ export class DoapCuriosity extends BaseComponent {
         });
     }
 
-    async handleScrapeSpecificAsk(scrapeId) {
+    async handleScrapeSpecificAsk(scrapeId: number): Promise<void> {
         // As a bridge for the older 'Plan with AI' button which relied on window.prompt
-        const promptText = prompt("What would you like to plan/do with this specific data?");
+        const promptText = window.prompt("What would you like to plan/do with this specific data?");
         if (!promptText) return;
         
         try {
-            const result = await window.api.askAI(scrapeId, promptText);
+            const result = await (window as any).api.askAI(scrapeId, promptText);
             if (result.success) {
                 window.dispatchEvent(new CustomEvent('open-modal', {
                     detail: { title: "AI Response", content: result.response }
@@ -133,17 +135,20 @@ export class DoapCuriosity extends BaseComponent {
             } else {
                 alert("AI Planning Failed: " + result.error);
             }
-        } catch (e) {
+        } catch (e: any) {
             alert("Exception: " + e.message);
         }
     }
 
-    async askAI() {
-        const input = this.shadowRoot.getElementById('curiosity-input');
-        const askBtn = this.shadowRoot.getElementById('ask-curiosity-btn');
-        const progress = this.shadowRoot.getElementById('curiosity-progress');
-        const resultDiv = this.shadowRoot.getElementById('curiosity-result');
-        const errorDiv = this.shadowRoot.getElementById('curiosity-error');
+    async askAI(): Promise<void> {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+
+        const input = shadow.getElementById('curiosity-input') as HTMLInputElement;
+        const askBtn = shadow.getElementById('ask-curiosity-btn') as HTMLButtonElement;
+        const progress = shadow.getElementById('curiosity-progress') as HTMLElement;
+        const resultDiv = shadow.getElementById('curiosity-result') as HTMLElement;
+        const errorDiv = shadow.getElementById('curiosity-error') as HTMLElement;
 
         const query = input.value.trim();
         if (!query) return alert('Please enter a question');
@@ -154,7 +159,7 @@ export class DoapCuriosity extends BaseComponent {
         askBtn.disabled = true;
 
         try {
-            const result = await window.api.askCuriosity(query);
+            const result = await (window as any).api.askCuriosity(query);
             progress.classList.add('hidden');
             askBtn.disabled = false;
 
@@ -165,22 +170,25 @@ export class DoapCuriosity extends BaseComponent {
                     ${result.context && result.context.length > 0 ? `
                     <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); font-size: 12px; color: var(--text-secondary);">
                         <strong>Sources Used:</strong><br>
-                        ${result.context.map((c, i) => `<div style="margin-top: 4px;">[${i+1}] ${c.title || 'Source'}</div>`).join('')}
+                        ${result.context.map((c: any, i: number) => `<div style="margin-top: 4px;">[${i+1}] ${c.title || 'Source'}</div>`).join('')}
                     </div>` : ''}
                 `;
                 resultDiv.classList.remove('hidden');
             } else {
                 this.showCuriosityError(result.error);
             }
-        } catch (err) {
+        } catch (err: any) {
             progress.classList.add('hidden');
             askBtn.disabled = false;
             this.showCuriosityError(err.message);
         }
     }
 
-    showCuriosityError(errorMsg) {
-        const errorDiv = this.shadowRoot.getElementById('curiosity-error');
+    showCuriosityError(errorMsg: string): void {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+
+        const errorDiv = shadow.getElementById('curiosity-error') as HTMLElement;
         let title = "Failed to Generate Answer";
         let fixHtml = "";
 

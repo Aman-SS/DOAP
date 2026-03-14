@@ -201,9 +201,12 @@ export class DoapHome extends BaseComponent {
         `);
     }
 
-    connectedCallback() {
-        const input = this.shadowRoot.getElementById('hub-search-input');
-        input.addEventListener('keydown', (e) => {
+    connectedCallback(): void {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+
+        const input = shadow.getElementById('hub-search-input') as HTMLInputElement;
+        input.addEventListener('keydown', (e: KeyboardEvent) => {
             if (e.key === 'Enter') {
                 const query = input.value.trim();
                 if (query) {
@@ -214,9 +217,9 @@ export class DoapHome extends BaseComponent {
             }
         });
 
-        this.shadowRoot.querySelectorAll('.quick-card').forEach(card => {
+        shadow.querySelectorAll('.quick-card').forEach(card => {
             card.addEventListener('click', () => {
-                const view = card.dataset.view;
+                const view = (card as HTMLElement).dataset.view;
                 window.dispatchEvent(new CustomEvent('navigate', {
                     detail: { view: view }
                 }));
@@ -224,21 +227,21 @@ export class DoapHome extends BaseComponent {
         });
 
         // Initialize status from global state if available
-        if (typeof window.ollamaOnline !== 'undefined') {
-            const dot = this.shadowRoot.querySelector('.ollama-status-dot');
-            const text = this.shadowRoot.querySelector('.ollama-status-text');
+        if (typeof (window as any).ollamaOnline !== 'undefined') {
+            const dot = shadow.querySelector('.ollama-status-dot');
+            const text = shadow.querySelector('.ollama-status-text') as HTMLElement;
             if (dot && text) {
-                if (window.ollamaOnline) dot.classList.add('connected');
-                text.innerText = window.ollamaOnline ? 'Online' : 'Offline';
+                if ((window as any).ollamaOnline) dot.classList.add('connected');
+                text.innerText = (window as any).ollamaOnline ? 'Online' : 'Offline';
             }
         }
 
-        this.shadowRoot.getElementById('hub-drawer-toggle').addEventListener('click', () => {
+        shadow.getElementById('hub-drawer-toggle')?.addEventListener('click', () => {
             window.dispatchEvent(new CustomEvent('toggle-drawer', { detail: { open: true } }));
         });
     }
 
-    disconnectedCallback() {
+    disconnectedCallback(): void {
         // Show global search when leaving home
         const globalSearch = document.getElementById('global-search-container');
         if (globalSearch) globalSearch.classList.remove('hidden');

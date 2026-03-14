@@ -1,11 +1,14 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
-const { app } = require('electron');
+import sqlite3 from 'sqlite3';
+import { Database } from 'sqlite3';
+import * as path from 'path';
+import { app } from 'electron';
+
+const sqlite = sqlite3.verbose();
 
 // Database path in user data folder
 const dbPath = path.join(app.getPath('userData'), 'doap_database.sqlite');
 
-const db = new sqlite3.Database(dbPath, (err) => {
+const db: Database = new sqlite.Database(dbPath, (err) => {
     if (err) {
         // Silent fail or system alert in production
     } else {
@@ -48,14 +51,32 @@ function initializeSchemas() {
     });
 }
 
-const dbManager = {
-    saveScrape: (data) => {
+export interface ScrapeData {
+    id?: number;
+    url: string;
+    title: string;
+    content: string;
+    markdown: string;
+    created_at?: string;
+}
+
+export interface dbManagerInterface {
+    saveScrape: (data: ScrapeData) => Promise<number>;
+    getScrapes: () => Promise<ScrapeData[]>;
+    getRawTableData: (tableName: string) => Promise<any[]>;
+    deleteScrape: (id: number) => Promise<boolean>;
+    getSetting: (key: string) => Promise<string | null>;
+    setSetting: (key: string, value: string) => Promise<boolean>;
+}
+
+const dbManager: dbManagerInterface = {
+    saveScrape: (data: ScrapeData) => {
         return new Promise((resolve, reject) => {
             const { url, title, content, markdown } = data;
             db.run(
                 `INSERT INTO scrapes (url, title, content, markdown) VALUES (?, ?, ?, ?)`,
                 [url, title, content, markdown],
-                function(err) {
+                function(this: any, err: Error | null) {
                     if (err) return reject(err);
                     resolve(this.lastID);
                 }
@@ -64,26 +85,26 @@ const dbManager = {
     },
     getScrapes: () => {
         return new Promise((resolve, reject) => {
-            db.all(`SELECT * FROM scrapes ORDER BY created_at DESC`, [], (err, rows) => {
+            db.all(`SELECT * FROM scrapes ORDER BY created_at DESC`, [], (err, rows: ScrapeData[]) => {
                 if (err) return reject(err);
                 resolve(rows);
             });
         });
     },
-    getRawTableData: (tableName) => {
+    getRawTableData: (tableName: string) => {
         return new Promise((resolve, reject) => {
             // Basic safety check for table names
             const allowedTables = ['scrapes', 'insights'];
             if (!allowedTables.includes(tableName)) {
                 return reject(new Error('Invalid table name'));
             }
-            db.all(`SELECT * FROM ${tableName} ORDER BY created_at DESC`, [], (err, rows) => {
+            db.all(`SELECT * FROM ${tableName} ORDER BY created_at DESC`, [], (err, rows: any[]) => {
                 if (err) return reject(err);
                 resolve(rows);
             });
         });
     },
-    deleteScrape: (id) => {
+    deleteScrape: (id: number) => {
         return new Promise((resolve, reject) => {
             db.serialize(() => {
                 db.run(`DELETE FROM insights WHERE scrape_id = ?`, [id]);
@@ -94,15 +115,15 @@ const dbManager = {
             });
         });
     },
-    getSetting: (key) => {
+    getSetting: (key: string) => {
         return new Promise((resolve, reject) => {
-            db.get(`SELECT value FROM settings WHERE key = ?`, [key], (err, row) => {
+            db.get(`SELECT value FROM settings WHERE key = ?`, [key], (err, row: { value: string } | undefined) => {
                 if (err) return reject(err);
                 resolve(row ? row.value : null);
             });
         });
     },
-    setSetting: (key, value) => {
+    setSetting: (key: string, value: string) => {
         return new Promise((resolve, reject) => {
             db.run(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`, [key, value], function(err) {
                 if (err) return reject(err);
@@ -112,4 +133,4 @@ const dbManager = {
     }
 };
 
-module.exports = dbManager;
+export default dbManager;

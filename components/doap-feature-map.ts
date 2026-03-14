@@ -1,9 +1,14 @@
 import { BaseComponent } from './base.js';
 
+// Declare external globals for TypeScript
+declare const ForceGraph: any;
+declare const d3: any;
+
 export class DoapFeatureMap extends BaseComponent {
+    private featureGraph: any = null;
+
     constructor() {
         super();
-        this.featureGraph = null;
         this.render(`
             <style>
                 #feature-graph-container {
@@ -27,32 +32,35 @@ export class DoapFeatureMap extends BaseComponent {
         `);
     }
 
-    connectedCallback() {
+    connectedCallback(): void {
         // Delay slightly to ensure component has dimensions after DOM insertion
         setTimeout(() => this.initFeatureGraph(), 150);
 
         window.addEventListener('resize', this.handleResize.bind(this));
     }
 
-    disconnectedCallback() {
+    disconnectedCallback(): void {
         window.removeEventListener('resize', this.handleResize.bind(this));
         if (this.featureGraph) {
             // Cleanup if the library supports it
-            this.shadowRoot.getElementById('feature-graph-container').innerHTML = '';
+            const container = this.shadowRoot?.getElementById('feature-graph-container');
+            if (container) {
+                container.innerHTML = '';
+            }
             this.featureGraph = null;
         }
     }
 
-    handleResize() {
-        const container = this.shadowRoot.getElementById('feature-graph-container');
+    handleResize(): void {
+        const container = this.shadowRoot?.getElementById('feature-graph-container');
         if (this.featureGraph && container) {
             this.featureGraph.width(container.clientWidth);
             this.featureGraph.height(container.clientHeight);
         }
     }
 
-    initFeatureGraph() {
-        const container = this.shadowRoot.getElementById('feature-graph-container');
+    initFeatureGraph(): void {
+        const container = this.shadowRoot?.getElementById('feature-graph-container');
         if (!container) return;
 
         const width = container.clientWidth || 800;
@@ -101,14 +109,14 @@ export class DoapFeatureMap extends BaseComponent {
             .width(width)
             .height(height)
             .d3Force('charge', d3.forceManyBody().strength(-400))
-            .d3Force('collide', d3.forceCollide(node => (node.val / 2) + 10))
-            .d3Force('link', d3.forceLink().id(d => d.id).distance(100))
-            .onNodeClick(node => {
+            .d3Force('collide', d3.forceCollide((node: any) => (node.val / 2) + 10))
+            .d3Force('link', d3.forceLink().id((d: any) => d.id).distance(100))
+            .onNodeClick((node: any) => {
                 if (node.view) {
                     window.dispatchEvent(new CustomEvent('navigate', { detail: { view: node.view } }));
                 }
             })
-            .nodeCanvasObject((node, ctx, globalScale) => {
+            .nodeCanvasObject((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
                 const label = node.name;
                 const fontSize = 14 / globalScale;
                 ctx.font = `${fontSize}px Inter, sans-serif`;

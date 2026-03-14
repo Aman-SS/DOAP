@@ -8,8 +8,17 @@ import './components/doap-feature-map.js';
 import './components/doap-settings.js';
 import './components/doap-browser.js';
 
+// Define the API interface as exposed by preload.js
+interface Window {
+    api: any;
+    ollamaOnline: boolean;
+    closeModal: () => void;
+}
+
+declare const window: Window & typeof globalThis;
+
 // Simple Router
-const routes = {
+const routes: Record<string, (params: any) => string> = {
     home: () => '<doap-home></doap-home>',
     scrape: () => '<doap-scrape></doap-scrape>',
     history: () => '<doap-history></doap-history>',
@@ -17,19 +26,19 @@ const routes = {
     curiosity: () => '<doap-curiosity></doap-curiosity>',
     'feature-map': () => '<doap-feature-map></doap-feature-map>',
     settings: () => '<doap-settings></doap-settings>',
-    browser: (params) => `<doap-browser url="${params.url || ''}"></doap-browser>`
+    browser: (params: any) => `<doap-browser url="${params.url || ''}"></doap-browser>`
 };
 
-const appRoot = document.getElementById('app-root');
-const navItems = document.querySelectorAll('.nav-item');
-const globalSearchInput = document.getElementById('global-search-input');
-const navDrawer = document.getElementById('nav-drawer');
-const drawerOverlay = document.getElementById('drawer-overlay');
-const closeDrawerBtn = document.getElementById('close-drawer');
-const mainHeader = document.getElementById('main-header');
-const globalDrawerToggle = document.getElementById('global-drawer-toggle');
+const appRoot = document.getElementById('app-root') as HTMLElement;
+const navItems = document.querySelectorAll('.nav-item') as NodeListOf<HTMLElement>;
+const globalSearchInput = document.getElementById('global-search-input') as HTMLInputElement;
+const navDrawer = document.getElementById('nav-drawer') as HTMLElement;
+const drawerOverlay = document.getElementById('drawer-overlay') as HTMLElement;
+const closeDrawerBtn = document.getElementById('close-drawer') as HTMLElement;
+const mainHeader = document.getElementById('main-header') as HTMLElement;
+const globalDrawerToggle = document.getElementById('global-drawer-toggle') as HTMLElement;
 
-function toggleDrawer(open) {
+function toggleDrawer(open: boolean) {
     if (open) {
         navDrawer.classList.remove('hidden');
         drawerOverlay.classList.remove('hidden');
@@ -43,7 +52,7 @@ function toggleDrawer(open) {
     }
 }
 
-function navigateTo(route, params = {}) {
+function navigateTo(route: string, params: any = {}) {
     if (!routes[route]) return;
 
     // Close drawer on navigation
@@ -70,22 +79,6 @@ function navigateTo(route, params = {}) {
     } else {
         mainHeader.classList.remove('hidden');
     }
-
-    // Update Title (Optional: if we ever bring back page titles)
-    /*
-    const titles = {
-        home: 'Dashboard',
-        scrape: 'Web Scraper',
-        history: 'Scrape History',
-        'db-viewer': 'Database Viewer',
-        curiosity: 'Curiosity (RAG)',
-        'feature-map': 'Architecture Map',
-        settings: 'Settings',
-        browser: 'Browser'
-    };
-    const titleEl = document.getElementById('page-title');
-    if (titleEl) titleEl.innerText = titles[route] || 'Dashboard';
-    */
 }
 
 // Drawer Event Listeners
@@ -93,12 +86,12 @@ globalDrawerToggle.addEventListener('click', () => toggleDrawer(true));
 closeDrawerBtn.addEventListener('click', () => toggleDrawer(false));
 drawerOverlay.addEventListener('click', () => toggleDrawer(false));
 
-window.addEventListener('toggle-drawer', (e) => {
+window.addEventListener('toggle-drawer', (e: any) => {
     toggleDrawer(e.detail.open);
 });
 
 // Global search handling
-globalSearchInput.addEventListener('keydown', (e) => {
+globalSearchInput.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
         const query = globalSearchInput.value.trim();
         if (query) {
@@ -116,17 +109,17 @@ navItems.forEach(btn => {
 });
 
 // Handle custom navigate events thrown by components (e.g. from Feature Map or Home)
-window.addEventListener('navigate', (e) => {
+window.addEventListener('navigate', (e: any) => {
     if (e.detail && e.detail.view) {
         navigateTo(e.detail.view, e.detail);
     }
 });
 
 // Handle global generic modal
-window.addEventListener('open-modal', (e) => {
-    const modal = document.getElementById('content-modal');
-    const titleEl = document.getElementById('modal-title');
-    const bodyEl = document.getElementById('modal-body');
+window.addEventListener('open-modal', (e: any) => {
+    const modal = document.getElementById('content-modal') as HTMLElement;
+    const titleEl = document.getElementById('modal-title') as HTMLElement;
+    const bodyEl = document.getElementById('modal-body') as HTMLElement;
 
     if (e.detail) {
         titleEl.innerText = e.detail.title || 'Details';
@@ -136,15 +129,13 @@ window.addEventListener('open-modal', (e) => {
 });
 
 window.closeModal = () => {
-    document.getElementById('content-modal').classList.add('hidden');
+    (document.getElementById('content-modal') as HTMLElement).classList.add('hidden');
 };
-// Attach to window so HTML inline onclick="closeModal()" still works
-window.closeModal = window.closeModal;
 
 // Handle global provider status updates
-window.addEventListener('provider-status', (e) => {
-    const dots = document.querySelectorAll('.status-indicator .dot, .ollama-status-dot');
-    const texts = document.querySelectorAll('#provider-status, .ollama-status-text');
+window.addEventListener('provider-status', (e: any) => {
+    const dots = document.querySelectorAll('.status-indicator .dot, .ollama-status-dot') as NodeListOf<HTMLElement>;
+    const texts = document.querySelectorAll('#provider-status, .ollama-status-text') as NodeListOf<HTMLElement>;
     
     dots.forEach(dot => {
         if (e.detail.online) {

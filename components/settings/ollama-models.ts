@@ -5,7 +5,7 @@ export class OllamaModels extends BaseComponent {
         super();
     }
 
-    connectedCallback() {
+    connectedCallback(): void {
         this.render(`
             <style>
                 .discovery-tags {
@@ -114,36 +114,42 @@ export class OllamaModels extends BaseComponent {
         this.loadModels();
     }
 
-    setupEventListeners() {
-        this.shadowRoot.getElementById('refresh-btn').addEventListener('click', () => this.loadModels());
-        this.shadowRoot.getElementById('pull-btn').addEventListener('click', () => this.pull());
+    private setupEventListeners(): void {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+
+        shadow.getElementById('refresh-btn')?.addEventListener('click', () => this.loadModels());
+        shadow.getElementById('pull-btn')?.addEventListener('click', () => this.pull());
         
-        this.shadowRoot.querySelectorAll('.discovery-tag').forEach(tag => {
+        shadow.querySelectorAll('.discovery-tag').forEach(tag => {
             tag.addEventListener('click', () => {
                 const model = tag.getAttribute('data-model');
-                const input = this.shadowRoot.getElementById('pull-input');
-                if (input) {
+                const input = shadow.getElementById('pull-input') as HTMLInputElement;
+                if (input && model) {
                     input.value = model;
                     input.focus();
                 }
             });
         });
 
-        if (window.api && window.api.onPullProgress) {
-            window.api.onPullProgress((data) => this.updatePullProgress(data));
+        if ((window as any).api && (window as any).api.onPullProgress) {
+            (window as any).api.onPullProgress((data: any) => this.updatePullProgress(data));
         }
 
         window.addEventListener('ollama-service-updated', () => this.loadModels());
     }
 
-    async loadModels() {
-        const body = this.shadowRoot.getElementById('models-body');
-        if (!body || !window.api) return;
+    async loadModels(): Promise<void> {
+        const shadow = this.shadowRoot;
+        if (!shadow || !(window as any).api) return;
 
-        const preferred = await window.api.getSetting('ollama_model') || 'llama3';
+        const body = shadow.getElementById('models-body');
+        if (!body) return;
+
+        const preferred = await (window as any).api.getSetting('ollama_model') || 'llama3';
 
         try {
-            const result = await window.api.checkOllama();
+            const result = await (window as any).api.checkOllama();
             if (!result.online) {
                 body.innerHTML = '<tr><td colspan="3" style="text-align: center;">Ollama is offline</td></tr>';
                 return;
@@ -156,7 +162,7 @@ export class OllamaModels extends BaseComponent {
                 body.innerHTML = '<tr><td colspan="3" style="text-align: center;">No models installed</td></tr>';
             } else {
                 body.innerHTML = '';
-                models.forEach(m => {
+                models.forEach((m: any) => {
                     const isActive = m.name === preferred;
                     const sizeGB = (m.size / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
                     const tr = document.createElement('tr');
@@ -165,7 +171,7 @@ export class OllamaModels extends BaseComponent {
                     tr.innerHTML = `
                         <td style="font-weight: 600;">
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                ${m.name}
+                                ${this.escapeHTML(m.name)}
                                 ${isActive ? '<span class="status-badge online" style="font-size: 9px; padding: 2px 6px;">Active</span>' : ''}
                             </div>
                         </td>
@@ -180,11 +186,11 @@ export class OllamaModels extends BaseComponent {
                     `;
                     
                     if (!isActive) {
-                        tr.querySelector('.use-btn').onclick = () => this.activate(m.name);
+                        (tr.querySelector('.use-btn') as HTMLElement).onclick = () => this.activate(m.name);
                     }
                     
-                    tr.querySelector('.info-btn').onclick = async () => this.showInfo(m.name);
-                    tr.querySelector('.delete-btn').onclick = () => this.delete(m.name);
+                    (tr.querySelector('.info-btn') as HTMLElement).onclick = async () => this.showInfo(m.name);
+                    (tr.querySelector('.delete-btn') as HTMLElement).onclick = () => this.delete(m.name);
 
                     body.appendChild(tr);
                     requestAnimationFrame(() => tr.style.opacity = '1');
@@ -195,18 +201,18 @@ export class OllamaModels extends BaseComponent {
         }
     }
 
-    async activate(name) {
-        if (!window.api) return;
+    async activate(name: string): Promise<void> {
+        if (!(window as any).api) return;
         window.dispatchEvent(new CustomEvent('run-terminal-command', { 
             detail: { command: `echo "Switching to model: ${name}"`, isPrompt: false } 
         }));
-        await window.api.updateSetting('ollama_model', name);
+        await (window as any).api.updateSetting('ollama_model', name);
         this.loadModels();
         window.dispatchEvent(new Event('settings-updated'));
     }
 
-    async showInfo(name) {
-        const res = await window.api.getModelInfo(name);
+    async showInfo(name: string): Promise<void> {
+        const res = await (window as any).api.getModelInfo(name);
         if(res.success) {
             window.dispatchEvent(new CustomEvent('open-modal', {
                 detail: { title: `Info: ${name}`, content: res.info.modelfile || res.info.template }
@@ -214,25 +220,28 @@ export class OllamaModels extends BaseComponent {
         }
     }
 
-    async delete(name) {
+    async delete(name: string): Promise<void> {
         if (!confirm(`Delete model '${name}'?`)) return;
         window.dispatchEvent(new CustomEvent('run-terminal-command', { 
             detail: { command: `ollama rm ${name}`, isPrompt: true } 
         }));
-        const res = await window.api.deleteModel(name);
+        const res = await (window as any).api.deleteModel(name);
         if (res.success) {
             this.loadModels();
         }
     }
 
-    async pull() {
-        const input = this.shadowRoot.getElementById('pull-input');
+    async pull(): Promise<void> {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+
+        const input = shadow.getElementById('pull-input') as HTMLInputElement;
         const name = input.value.trim();
         if (!name) return;
 
-        const progress = this.shadowRoot.getElementById('pull-progress');
-        const bar = this.shadowRoot.getElementById('progress-bar');
-        const text = this.shadowRoot.getElementById('progress-text');
+        const progress = shadow.getElementById('pull-progress') as HTMLElement;
+        const bar = shadow.getElementById('progress-bar') as HTMLElement;
+        const text = shadow.getElementById('progress-text') as HTMLElement;
 
         window.dispatchEvent(new CustomEvent('run-terminal-command', { 
             detail: { command: `ollama pull ${name}`, isPrompt: true } 
@@ -242,16 +251,19 @@ export class OllamaModels extends BaseComponent {
         bar.style.width = '0%';
         text.innerText = `Preparing to pull ${name}...`;
 
-        const res = await window.api.pullModel(name);
+        const res = await (window as any).api.pullModel(name);
         if (!res.success) {
             progress.classList.add('hidden');
         }
     }
 
-    updatePullProgress(data) {
-        const progress = this.shadowRoot.getElementById('pull-progress');
-        const bar = this.shadowRoot.getElementById('progress-bar');
-        const text = this.shadowRoot.getElementById('progress-text');
+    private updatePullProgress(data: any): void {
+        const shadow = this.shadowRoot;
+        if (!shadow) return;
+
+        const progress = shadow.getElementById('pull-progress') as HTMLElement;
+        const bar = shadow.getElementById('progress-bar') as HTMLElement;
+        const text = shadow.getElementById('progress-text') as HTMLElement;
         
         if (data.status) {
             text.innerText = data.status;
@@ -267,7 +279,8 @@ export class OllamaModels extends BaseComponent {
                 this.loadModels();
                 setTimeout(() => {
                     progress.classList.add('hidden');
-                    this.shadowRoot.getElementById('pull-input').value = '';
+                    const input = shadow.getElementById('pull-input') as HTMLInputElement;
+                    if (input) input.value = '';
                 }, 3000);
             }
         }

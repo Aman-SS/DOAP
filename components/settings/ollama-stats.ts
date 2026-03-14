@@ -1,11 +1,13 @@
 import { BaseComponent } from '../base.js';
 
 export class OllamaStats extends BaseComponent {
+    private pollInterval: any;
+
     constructor() {
         super();
     }
 
-    connectedCallback() {
+    connectedCallback(): void {
         this.render(`
             <style>
                 .model-list {
@@ -44,17 +46,20 @@ export class OllamaStats extends BaseComponent {
         this.pollInterval = setInterval(() => this.loadRunning(), 10000);
     }
 
-    disconnectedCallback() {
+    disconnectedCallback(): void {
         if (this.pollInterval) clearInterval(this.pollInterval);
     }
 
-    async loadRunning() {
-        const list = this.shadowRoot.getElementById('running-list');
-        const badge = this.shadowRoot.getElementById('running-count');
-        if (!list || !window.api) return;
+    async loadRunning(): Promise<void> {
+        const shadow = this.shadowRoot;
+        if (!shadow || !(window as any).api) return;
+
+        const list = shadow.getElementById('running-list');
+        const badge = shadow.getElementById('running-count');
+        if (!list || !badge) return;
 
         try {
-            const result = await window.api.getRunningModels();
+            const result = await (window as any).api.getRunningModels();
             if (result.success && result.models) {
                 const models = result.models;
                 badge.innerText = `${models.length} Active`;
@@ -62,10 +67,10 @@ export class OllamaStats extends BaseComponent {
                 if (models.length === 0) {
                     list.innerHTML = '<p style="font-size: 13px; color: var(--text-secondary); text-align: center; padding: 20px;">No models currently in memory.</p>';
                 } else {
-                    list.innerHTML = models.map(m => `
+                    list.innerHTML = models.map((m: any) => `
                         <div class="model-item">
                             <div class="model-item-info">
-                                <h5>${m.name}</h5>
+                                <h5>${this.escapeHTML(m.name)}</h5>
                                 <p>${m.size_vram ? (m.size_vram / (1024 * 1024 * 1024)).toFixed(2) + ' GB VRAM' : 'In memory'}</p>
                             </div>
                             <span class="status-badge online" style="font-size: 9px;">Running</span>
