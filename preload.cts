@@ -20,6 +20,26 @@ contextBridge.exposeInMainWorld('api', {
   startOllamaService: () => ipcRenderer.invoke('start-ollama-service'),
   stopOllamaService: () => ipcRenderer.invoke('stop-ollama-service'),
   onPullProgress: (callback: (data: any) => void) => ipcRenderer.on('pull-progress', (event, data) => callback(data)),
+  
+  // Enhanced Terminal API
+  terminal: {
+    spawn: (id: string) => ipcRenderer.invoke('terminal-spawn', id),
+    write: (id: string, data: string) => ipcRenderer.send('terminal-write', { id, data }),
+    resize: (id: string, cols: number, rows: number) => ipcRenderer.send('terminal-resize', { id, cols, rows }),
+    kill: (id: string) => ipcRenderer.send('terminal-kill', id),
+    onData: (id: string, callback: (data: string) => void) => {
+        const channel = `terminal-data-${id}`;
+        ipcRenderer.on(channel, (event, data) => callback(data));
+        return () => ipcRenderer.removeAllListeners(channel);
+    },
+    onExit: (id: string, callback: (data: { exitCode: number, signal?: number }) => void) => {
+        const channel = `terminal-exit-${id}`;
+        ipcRenderer.on(channel, (event, data) => callback(data));
+        return () => ipcRenderer.removeAllListeners(channel);
+    }
+  },
+
+  // Legacy (Keep for fallback if needed during transition)
   terminalCommandStream: (command: string) => ipcRenderer.send('terminal-command-stream', command),
   onTerminalData: (callback: (data: string) => void) => ipcRenderer.on('terminal-stream-data', (event, data) => callback(data)),
   onTerminalExit: (callback: (code: number) => void) => ipcRenderer.on('terminal-stream-exit', (event, code) => callback(code))

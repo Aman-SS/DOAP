@@ -172,11 +172,21 @@ header.hidden {
 }
 
 .page-container {
-    flex: 1;
+    flex: 1 1 0;
+    min-height: 0;
     padding: 32px 40px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+}
+
+/* Keep terminal view fixed height so it scrolls internally instead of shifting layout */
+#app-root doap-terminal-view {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
 }
 
 

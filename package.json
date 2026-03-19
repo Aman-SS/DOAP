@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist-ts/main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "tsc && electron .",
     "compile": "tsc",
     "dev": "tsc && electron .",
     "build": "tsc && electron-builder",
@@ -16,6 +16,7 @@
     "axios": "^1.6.7",
     "cheerio": "^1.2.0",
     "jsdom": "^28.1.0",
+    "node-pty": "^1.1.0",
     "sqlite3": "^5.0.2"
   },
   "devDependencies": {
@@ -31,6 +32,7 @@
   "build": {
     "appId": "com.doap.app",
     "productName": "DOAP",
+    "npmRebuild": false,
     "directories": {
       "output": "dist"
     },
@@ -47,6 +49,7 @@
       "target": [
         "nsis"
       ],
+      "signAndEditExecutable": false,
       "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "nsis": {

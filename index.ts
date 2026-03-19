@@ -5,8 +5,8 @@ import './components/doap-history.js';
 import './components/doap-db-viewer.js';
 import './components/doap-curiosity.js';
 import './components/doap-feature-map.js';
-import './components/doap-settings.js';
 import './components/doap-browser.js';
+// Settings (and its terminal) and Terminal view are lazy-loaded to avoid xterm/globals blocking app start
 
 // Define the API interface as exposed by preload.js
 interface Window {
@@ -25,20 +25,22 @@ const routes: Record<string, (params: any) => string> = {
     'db-viewer': () => '<doap-db-viewer></doap-db-viewer>',
     curiosity: () => '<doap-curiosity></doap-curiosity>',
     'feature-map': () => '<doap-feature-map></doap-feature-map>',
+    terminal: () => '<doap-terminal-view></doap-terminal-view>',
     settings: () => '<doap-settings></doap-settings>',
     browser: (params: any) => `<doap-browser url="${params.url || ''}"></doap-browser>`
 };
 
-const appRoot = document.getElementById('app-root') as HTMLElement;
+const appRoot = document.getElementById('app-root') as HTMLElement | null;
 const navItems = document.querySelectorAll('.nav-item') as NodeListOf<HTMLElement>;
-const globalSearchInput = document.getElementById('global-search-input') as HTMLInputElement;
-const navDrawer = document.getElementById('nav-drawer') as HTMLElement;
-const drawerOverlay = document.getElementById('drawer-overlay') as HTMLElement;
-const closeDrawerBtn = document.getElementById('close-drawer') as HTMLElement;
-const mainHeader = document.getElementById('main-header') as HTMLElement;
-const globalDrawerToggle = document.getElementById('global-drawer-toggle') as HTMLElement;
+const globalSearchInput = document.getElementById('global-search-input') as HTMLInputElement | null;
+const navDrawer = document.getElementById('nav-drawer') as HTMLElement | null;
+const drawerOverlay = document.getElementById('drawer-overlay') as HTMLElement | null;
+const closeDrawerBtn = document.getElementById('close-drawer') as HTMLElement | null;
+const mainHeader = document.getElementById('main-header') as HTMLElement | null;
+const globalDrawerToggle = document.getElementById('global-drawer-toggle') as HTMLElement | null;
 
 function toggleDrawer(open: boolean) {
+    if (!navDrawer || !drawerOverlay) return;
     if (open) {
         navDrawer.classList.remove('hidden');
         drawerOverlay.classList.remove('hidden');
@@ -52,11 +54,27 @@ function toggleDrawer(open: boolean) {
     }
 }
 
-function navigateTo(route: string, params: any = {}) {
-    if (!routes[route]) return;
+async function navigateTo(route: string, params: any = {}) {
+    if (!appRoot || !routes[route]) return;
 
     // Close drawer on navigation
     toggleDrawer(false);
+
+    // Lazy-load terminal/settings so xterm and globals don't block initial app load.
+    // Use full URL for dynamic import so it works under Electron's file:// protocol.
+    const baseUrl = new URL(import.meta.url).href.replace(/\/[^/]*$/, '/');
+    try {
+        if (route === 'terminal') {
+            await import(/* @vite-ignore */ new URL('components/doap-terminal-view.js', baseUrl).href);
+        }
+        if (route === 'settings') {
+            await import(/* @vite-ignore */ new URL('components/doap-settings.js', baseUrl).href);
+        }
+    } catch (err) {
+        console.error('DOAP: Failed to load view', route, err);
+        appRoot.innerHTML = `<div class="welcome-card" style="padding: 24px;"><p style="color: var(--text-secondary);">Failed to load ${route}. Check the console for details.</p></div>`;
+        return;
+    }
 
     // Destroy old component, insert new one
     appRoot.innerHTML = routes[route](params);
@@ -74,25 +92,27 @@ function navigateTo(route: string, params: any = {}) {
     }
 
     // Update Header visibility
-    if (route === 'home') {
-        mainHeader.classList.add('hidden');
-    } else {
-        mainHeader.classList.remove('hidden');
+    if (mainHeader) {
+        if (route === 'home') {
+            mainHeader.classList.add('hidden');
+        } else {
+            mainHeader.classList.remove('hidden');
+        }
     }
 }
 
 // Drawer Event Listeners
-globalDrawerToggle.addEventListener('click', () => toggleDrawer(true));
-closeDrawerBtn.addEventListener('click', () => toggleDrawer(false));
-drawerOverlay.addEventListener('click', () => toggleDrawer(false));
+globalDrawerToggle?.addEventListener('click', () => toggleDrawer(true));
+closeDrawerBtn?.addEventListener('click', () => toggleDrawer(false));
+drawerOverlay?.addEventListener('click', () => toggleDrawer(false));
 
 window.addEventListener('toggle-drawer', (e: any) => {
     toggleDrawer(e.detail.open);
 });
 
 // Global search handling
-globalSearchInput.addEventListener('keydown', (e: KeyboardEvent) => {
-    if (e.key === 'Enter') {
+globalSearchInput?.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Enter' && globalSearchInput) {
         const query = globalSearchInput.value.trim();
         if (query) {
             navigateTo('browser', { url: query });
@@ -174,5 +194,9 @@ async function globalCheckStatus() {
 globalCheckStatus(); 
 setInterval(globalCheckStatus, 10000);
 
-// Initial mount
-navigateTo('home');
+// Initial mount (guard so a missing app-root doesn't throw)
+if (appRoot) {
+    navigateTo('home');
+} else {
+    console.error('DOAP: #app-root not found. Check that index.html is loaded correctly.');
+}

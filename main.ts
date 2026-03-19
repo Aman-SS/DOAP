@@ -6,9 +6,15 @@ import { crawlWebsite } from './scraper.js';
 import axios from 'axios';
 import { spawn, exec } from 'child_process';
 import { fileURLToPath } from 'url';
+import * as pty from 'node-pty';
+import { createRequire } from 'module';
 
+const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Terminal Service to manage PTY instances
+const terminals: Map<string, pty.IPty> = new Map();
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -26,7 +32,58 @@ function createWindow() {
   win.loadFile(path.join(__dirname, '../index.html'));
   win.maximize();
   
-  // IPC Handlers
+  // Terminal IPC Handlers
+  ipcMain.handle('terminal-spawn', (event, id: string) => {
+    // Kill existing if id matches
+    if (terminals.has(id)) {
+      terminals.get(id)?.kill();
+    }
+
+    const shell = 'wsl.exe';
+    const ptyProcess = pty.spawn(shell, [], {
+      name: 'xterm-256color',
+      cols: 80,
+      rows: 24,
+      cwd: process.env.HOME,
+      env: process.env as any
+    });
+
+    ptyProcess.onData((data) => {
+      event.sender.send(`terminal-data-${id}`, data);
+    });
+
+    ptyProcess.onExit(({ exitCode, signal }) => {
+      event.sender.send(`terminal-exit-${id}`, { exitCode, signal });
+      terminals.delete(id);
+    });
+
+    terminals.set(id, ptyProcess);
+    return true;
+  });
+
+  ipcMain.on('terminal-write', (event, { id, data }) => {
+    const ptyProcess = terminals.get(id);
+    if (ptyProcess) {
+      ptyProcess.write(data);
+    }
+  });
+
+  ipcMain.on('terminal-resize', (event, { id, cols, rows }) => {
+    const ptyProcess = terminals.get(id);
+    if (ptyProcess) {
+      ptyProcess.resize(cols, rows);
+    }
+  });
+
+  ipcMain.on('terminal-kill', (event, id) => {
+    const ptyProcess = terminals.get(id);
+    if (ptyProcess) {
+      ptyProcess.kill();
+      terminals.delete(id);
+    }
+  });
+
+  // Existing IPC Handlers (Retained for compatibility or moved)
   ipcMain.handle('scrape-url', async (event, { url, selector }: { url: string, selector: string | null }) => {
     try {
       const data = await crawlWebsite(url, selector);
@@ -78,24 +135,14 @@ function createWindow() {
     });
   });
 
+  // Legacy command stream - Consider removing after refactor
   ipcMain.on('terminal-command-stream', (event, command: string) => {
     try {
-      // Use cmd /c wsl to better handle combined command strings if needed, 
-      // or just spawn wsl with arguments
       const args = command.split(' ').filter(Boolean);
       const child = spawn('wsl', args);
-      
-      child.stdout.on('data', (data) => {
-        event.sender.send('terminal-stream-data', data.toString());
-      });
-      
-      child.stderr.on('data', (data) => {
-        event.sender.send('terminal-stream-data', data.toString());
-      });
-      
-      child.on('close', (code) => {
-        event.sender.send('terminal-stream-exit', code);
-      });
+      child.stdout.on('data', (data) => event.sender.send('terminal-stream-data', data.toString()));
+      child.stderr.on('data', (data) => event.sender.send('terminal-stream-data', data.toString()));
+      child.on('close', (code) => event.sender.send('terminal-stream-exit', code));
     } catch (e: any) {
       event.sender.send('terminal-stream-data', `Error spawning command: ${e.message}\n`);
       event.sender.send('terminal-stream-exit', 1);
@@ -167,16 +214,13 @@ function createWindow() {
             return { success: true, response: "I don't have any scraped data yet. Please go to the 'New Scrape' tab to crawl some websites first!", context: [] };
         }
 
-        // Simple Keyword-based Retrieval (Naive RAG)
         const queryWords = query.toLowerCase().split(/\W+/).filter(w => w.length > 2);
-        
-        // Score scrapes based on keyword frequency
         const scoredScrapes = scrapes.map(scrape => {
             const content = (scrape.content || '').toLowerCase();
             const title = (scrape.title || '').toLowerCase();
             let score = 0;
             queryWords.forEach(word => {
-                if (title.includes(word)) score += 5; // Title match gives higher weight
+                if (title.includes(word)) score += 5;
                 const regex = new RegExp(word, 'g');
                 const matches = content.match(regex);
                 if (matches) score += matches.length;
@@ -184,16 +228,11 @@ function createWindow() {
             return { ...scrape, score };
         });
 
-        // Sort by score descending and take top 2
         scoredScrapes.sort((a, b) => b.score - a.score);
         const topContexts = scoredScrapes.filter(s => s.score > 0).slice(0, 2);
-        
-        // Fallback to recent 2 if no keyword match
         const contextsToUse = topContexts.length > 0 ? topContexts : scrapes.slice(0, 2);
 
-        // Build the prompt context
         let contextText = contextsToUse.map(c => `Source URL: ${c.url}\nTitle: ${c.title}\nContent: ${c.content.substring(0, 2500)}...`).join('\n\n---\n\n');
-
         const systemPrompt = `You are a helpful AI assistant integrated into a desktop app. Answer the user's question using ONLY the provided context below. If the answer is not in the context, say "I don't have enough information in the scraped data to answer that."\n\nContext:\n${contextText}`;
 
         const ollamaResponse = await axios.post(`${baseUrl}/api/generate`, {
@@ -265,26 +304,18 @@ function createWindow() {
 
   ipcMain.handle('start-ollama-service', async () => {
     return new Promise((resolve) => {
-      // Execute 'ollama serve' in WSL. Use detached to let it survive parent exit if needed,
-      // and stdio ignore to avoid bloat.
       try {
-        const child = spawn('wsl', ['ollama', 'serve'], {
-          detached: true,
-          stdio: 'ignore'
-        });
+        const child = spawn('wsl', ['ollama', 'serve'], { detached: true, stdio: 'ignore' });
         child.unref();
         resolve({ success: true, message: 'Ollama service start command sent' });
-      } catch (error: any) {
-        resolve({ success: false, error: error.message });
-      }
+      } catch (error: any) { resolve({ success: false, error: error.message }); }
     });
   });
 
   ipcMain.handle('stop-ollama-service', async () => {
     return new Promise((resolve) => {
-      // Ubuntu/Debian usually has pkill. Fallback to killall if needed.
       exec('wsl pkill ollama', (error, stdout, stderr) => {
-        if (error && (error as any).code !== 1) { // code 1 usually means process not found
+        if (error && (error as any).code !== 1) {
           resolve({ success: false, error: error.message || stderr });
         } else {
           resolve({ success: true, message: 'Ollama service stopped' });
@@ -296,21 +327,18 @@ function createWindow() {
   win.webContents.on('console-message', (event, level, message, line, sourceId) => {
     console.log(`[Browser Console L${level}] ${message} (line ${line} in ${sourceId})`);
   });
-  // win.webContents.openDevTools();
 }
 
 app.whenReady().then(() => {
   createWindow();
-
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  // Cleanup terminals
+  terminals.forEach(t => t.kill());
+  terminals.clear();
+  if (process.platform !== 'darwin') app.quit();
 });
